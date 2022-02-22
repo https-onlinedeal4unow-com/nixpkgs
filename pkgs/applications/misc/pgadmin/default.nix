@@ -1,7 +1,7 @@
-{ stdenv, fetchurl, fetchpatch, postgresql, wxGTK, libxml2, libxslt, openssl, zlib, makeDesktopItem }:
+{ lib, stdenv, fetchurl, fetchpatch, postgresql, wxGTK, libxml2, libxslt, openssl, zlib, makeDesktopItem }:
 
 stdenv.mkDerivation rec {
-  name = "pgadmin3-${version}";
+  pname = "pgadmin3";
   version = "1.22.2";
 
   src = fetchurl {
@@ -31,9 +31,15 @@ stdenv.mkDerivation rec {
     "--with-libxslt=${libxslt.dev}"
   ];
 
-  meta = with stdenv.lib; {
+  # starting with C++11 narrowing became an error
+  # and not just a warning. With the current c++ compiler
+  # pgadmin3 will fail with several "narrowing" errors.
+  # see https://gcc.gnu.org/onlinedocs/gcc/C_002b_002b-Dialect-Options.html#index-Wno-narrowing
+  makeFlags = "CXXFLAGS=-Wno-narrowing" ;
+
+  meta = with lib; {
     description = "PostgreSQL administration GUI tool";
-    homepage = https://www.pgadmin.org;
+    homepage = "https://www.pgadmin.org";
     license = licenses.gpl2;
     maintainers = with maintainers; [ domenkozar wmertens ];
     platforms = platforms.unix;
@@ -47,7 +53,7 @@ stdenv.mkDerivation rec {
       exec = "pgadmin3";
       icon = "pgAdmin3";
       type = "Application";
-      categories = "Application;Development;";
+      categories = "Development;";
       mimeType = "text/html";
     };
   in ''

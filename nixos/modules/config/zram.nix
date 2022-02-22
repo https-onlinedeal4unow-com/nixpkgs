@@ -80,6 +80,15 @@ in
         '';
       };
 
+      memoryMax = mkOption {
+        default = null;
+        type = with types; nullOr int;
+        description = ''
+          Maximum total amount of memory (in bytes) that can be used by the zram
+          swap devices.
+        '';
+      };
+
       priority = mkOption {
         default = 5;
         type = types.int;
@@ -92,12 +101,12 @@ in
 
       algorithm = mkOption {
         default = "zstd";
-        example = "lzo";
+        example = "lz4";
         type = with types; either (enum [ "lzo" "lz4" "zstd" ]) str;
         description = ''
           Compression algorithm. <literal>lzo</literal> has good compression,
           but is slow. <literal>lz4</literal> has bad compression, but is fast.
-          <literal>zstd</literal> is both good compression and fast.
+          <literal>zstd</literal> is both good compression and fast, but requires newer kernel.
           You can check what other algorithms are supported by your zram device with
           <programlisting>cat /sys/class/block/zram*/comp_algorithm</programlisting>
         '';
@@ -146,11 +155,16 @@ in
 
               # Calculate memory to use for zram
               mem=$(${pkgs.gawk}/bin/awk '/MemTotal: / {
-                  print int($2*${toString cfg.memoryPercent}/100.0/${toString devicesCount}*1024)
+                  value=int($2*${toString cfg.memoryPercent}/100.0/${toString devicesCount}*1024);
+                    ${lib.optionalString (cfg.memoryMax != null) ''
+                      memory_max=int(${toString cfg.memoryMax}/${toString devicesCount});
+                      if (value > memory_max) { value = memory_max }
+                    ''}
+                  print value
               }' /proc/meminfo)
 
-              ${pkgs.utillinux}/sbin/zramctl --size $mem --algorithm ${cfg.algorithm} /dev/${dev}
-              ${pkgs.utillinux}/sbin/mkswap /dev/${dev}
+              ${pkgs.util-linux}/sbin/zramctl --size $mem --algorithm ${cfg.algorithm} /dev/${dev}
+              ${pkgs.util-linux}/sbin/mkswap /dev/${dev}
             '';
             restartIfChanged = false;
           };

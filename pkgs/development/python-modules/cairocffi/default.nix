@@ -1,6 +1,7 @@
-# FIXME: make gdk_pixbuf dependency optional
+# FIXME: make gdk-pixbuf dependency optional
 { stdenv
 , buildPythonPackage
+, pythonOlder
 , fetchPypi
 , lib
 , substituteAll
@@ -10,18 +11,23 @@
 , glibcLocales
 , cairo
 , cffi
-, withXcffib ? false, xcffib
+, numpy
+, withXcffib ? false
+, xcffib
 , python
 , glib
-, gdk_pixbuf }:
+, gdk-pixbuf
+}:
 
 buildPythonPackage rec {
   pname = "cairocffi";
-  version = "1.0.2";
+  version = "1.3.0";
+
+  disabled = pythonOlder "3.5";
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "01ac51ae12c4324ca5809ce270f9dd1b67f5166fe63bd3e497e9ea3ca91946ff";
+    sha256 = "sha256-EIo6fLCeIDvdhQHZuq2R14bSBFYb1x6TZOizSJfEe5E=";
   };
 
   LC_ALL = "en_US.UTF-8";
@@ -32,29 +38,41 @@ buildPythonPackage rec {
     fontDirectories = [ freefont_ttf ];
   };
 
-  checkInputs = [ pytest glibcLocales ];
   propagatedBuildInputs = [ cairo cffi ] ++ lib.optional withXcffib xcffib;
+  propagatedNativeBuildInputs = [ cffi ];
+
+  # pytestCheckHook does not work
+  checkInputs = [ numpy pytest glibcLocales ];
+
+  postPatch = ''
+    substituteInPlace setup.cfg \
+      --replace "pytest-runner" "" \
+      --replace "pytest-cov" "" \
+      --replace "pytest-flake8" "" \
+      --replace "pytest-isort" "" \
+      --replace "--flake8 --isort" ""
+  '';
 
   checkPhase = ''
     py.test $out/${python.sitePackages}
   '';
 
   patches = [
-    # OSError: dlopen() failed to load a library: gdk_pixbuf-2.0 / gdk_pixbuf-2.0-0
+    # OSError: dlopen() failed to load a library: gdk-pixbuf-2.0 / gdk-pixbuf-2.0-0
     (substituteAll {
       src = ./dlopen-paths.patch;
       ext = stdenv.hostPlatform.extensions.sharedLibrary;
       cairo = cairo.out;
       glib = glib.out;
-      gdk_pixbuf = gdk_pixbuf.out;
+      gdk_pixbuf = gdk-pixbuf.out;
     })
     ./fix_test_scaled_font.patch
   ];
 
   meta = with lib; {
-    homepage = https://github.com/SimonSapin/cairocffi;
+    homepage = "https://github.com/SimonSapin/cairocffi";
     license = licenses.bsd3;
-    maintainers = with maintainers; [];
+    maintainers = with maintainers; [ SuperSandro2000 ];
     description = "cffi-based cairo bindings for Python";
   };
 }

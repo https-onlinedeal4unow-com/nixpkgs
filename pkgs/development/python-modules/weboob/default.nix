@@ -1,62 +1,97 @@
-{ buildPythonPackage, fetchurl, fetchPypi, stdenv, isPy27
-, nose, pillow, prettytable, pyyaml, dateutil, gdata
-, requests, mechanize, feedparser, lxml, gnupg, pyqt5
-, libyaml, simplejson, cssselect, futures, pdfminer
-, termcolor, google_api_python_client, html2text
+{ lib
+, Babel
+, buildPythonPackage
+, cssselect
+, feedparser
+, fetchPypi
+, gdata
+, gnupg
+, google-api-python-client
+, html2text
+, libyaml
+, lxml
+, mechanize
+, nose
+, pdfminer
+, pillow
+, prettytable
+, pyqt5
+, pytestCheckHook
+, python-dateutil
+, pythonOlder
+, pyyaml
+, requests
+, simplejson
+, termcolor
 , unidecode
 }:
 
-let
-  # Support for Python 2.7 was dropped in 1.7.7
-  google_api_python_client_python27 = google_api_python_client.overrideDerivation
-    (oldAttrs: rec {
-      pname = "google-api-python-client";
-      version = "1.7.6";
-      src = fetchPypi {
-        inherit pname version;
-        sha256 = "14w5sdrp0bk9n0r2lmpqmrbf2zclpfq6q7giyahnskkfzdkb165z";
-      };
-    });
-in buildPythonPackage rec {
+buildPythonPackage rec {
   pname = "weboob";
-  version = "1.3";
-  disabled = ! isPy27;
+  version = "2.0";
+  format = "setuptools";
 
-  src = fetchurl {
-    url = "https://symlink.me/attachments/download/356/${pname}-${version}.tar.gz";
-    sha256 = "0m5yh49lplvb57dfilczh65ky35fshp3g7ni31pwfxwqi1f7i4f9";
+  disabled = pythonOlder "3.7";
+
+  src = fetchPypi {
+    inherit pname version;
+    sha256 = "1c69vzf8sg8471lcaafpz9iw2q3rfj5hmcpqrs2k59fkgbvy32zw";
   };
 
-  postPatch = ''
-    # Disable doctests that require networking:
-    sed -i -n -e '/^ *def \+pagination *(.*: *$/ {
-      p; n; p; /"""\|'\'\'\'''/!b
+  nativeBuildInputs = [
+    pyqt5
+  ];
 
-      :loop
-      n; /^ *\(>>>\|\.\.\.\)/ { h; bloop }
-      x; /^ *\(>>>\|\.\.\.\)/bloop; x
-      p; /"""\|'\'\'\'''/b
-      bloop
-    }; p' weboob/browser/browsers.py weboob/browser/pages.py
+  propagatedBuildInputs = [
+    Babel
+    cssselect
+    python-dateutil
+    feedparser
+    gdata
+    gnupg
+    google-api-python-client
+    html2text
+    libyaml
+    lxml
+    mechanize
+    pdfminer
+    pillow
+    prettytable
+    pyqt5
+    pyyaml
+    requests
+    simplejson
+    termcolor
+    unidecode
+  ];
+
+  postPatch = ''
+    substituteInPlace setup.cfg \
+      --replace "with-doctest = 1" "" \
+      --replace "with-coverage = 1" "" \
+      --replace "weboob.browser.filters.standard," "" \
+      --replace "weboob.browser.tests.filters," "" \
+      --replace "weboob.tools.application.formatters.json," "" \
+      --replace "weboob.tools.application.formatters.table," "" \
+      --replace "weboob.tools.capabilities.bank.transactions," ""
   '';
 
-  setupPyBuildFlags = ["--qt" "--xdg"];
-
-  checkInputs = [ nose ];
-
-  propagatedBuildInputs = [ pillow prettytable pyyaml dateutil
-    gdata requests mechanize feedparser lxml gnupg pyqt5 libyaml
-    simplejson cssselect futures pdfminer termcolor
-    google_api_python_client_python27 html2text unidecode ];
+  checkInputs = [
+    nose
+  ];
 
   checkPhase = ''
     nosetests
   '';
 
-  meta = {
-    homepage = http://weboob.org;
-    description = "Collection of applications and APIs to interact with websites without requiring the user to open a browser";
-    license = stdenv.lib.licenses.agpl3;
+  pythonImportsCheck = [
+    "weboob"
+  ];
+
+  meta = with lib; {
+    description = "Collection of applications and APIs to interact with websites";
+    homepage = "http://weboob.org";
+    license = licenses.agpl3Plus;
+    maintainers = with maintainers; [ ];
   };
 }
-

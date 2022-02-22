@@ -1,35 +1,42 @@
-{ stdenv, fetchFromGitHub, pantheon, meson, ninja }:
+{ lib
+, stdenv
+, fetchFromGitHub
+, nix-update-script
+, meson
+, ninja
+, gettext
+, sassc
+}:
 
 stdenv.mkDerivation rec {
-  pname = "stylesheet";
-  version = "5.2.1";
-
-  name = "elementary-gtk-theme-${version}";
+  pname = "elementary-gtk-theme";
+  version = "6.1.1";
 
   src = fetchFromGitHub {
     owner = "elementary";
-    repo = pname;
+    repo = "stylesheet";
     rev = version;
-    sha256 = "03l8m87f7z25svxk0hhcqnn4qnnqvasr5qwzq3s87lx25gwjml29";
-  };
-
-  passthru = {
-    updateScript = pantheon.updateScript {
-      repoName = pname;
-      attrPath = "elementary-gtk-theme";
-    };
+    sha256 = "sha256-gciBn5MQ5Cu+dROL5kCt2GCbNA7W4HOWXyjMBd4OP+8=";
   };
 
   nativeBuildInputs = [
+    gettext
     meson
     ninja
+    sassc
   ];
 
-  meta = with stdenv.lib; {
+  passthru = {
+    updateScript = nix-update-script {
+      attrPath = "pantheon.${pname}";
+    };
+  };
+
+  meta = with lib; {
     description = "GTK theme designed to be smooth, attractive, fast, and usable";
-    homepage = https://github.com/elementary/stylesheet;
-    license = licenses.gpl3;
+    homepage = "https://github.com/elementary/stylesheet";
+    license = licenses.gpl3Plus;
     platforms = platforms.linux;
-    maintainers = pantheon.maintainers;
+    maintainers = teams.pantheon.members;
   };
 }

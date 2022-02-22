@@ -1,7 +1,9 @@
-{ lib, stdenv, fetchFromGitHub, pkgconfig, libtool
+{ lib, stdenv, fetchFromGitHub, pkg-config, libtool
 , bzip2, zlib, libX11, libXext, libXt, fontconfig, freetype, ghostscript, libjpeg, djvulibre
-, lcms2, openexr, libpng, librsvg, libtiff, libxml2, openjpeg, libwebp, libheif
-, ApplicationServices
+, lcms2, openexr, libjxl, libpng, liblqr1, libraw, librsvg, libtiff, libxml2, openjpeg, libwebp, libheif
+, potrace, ApplicationServices
+, Foundation
+, testVersion, imagemagick
 }:
 
 let
@@ -9,28 +11,21 @@ let
     if stdenv.hostPlatform.system == "i686-linux" then "i686"
     else if stdenv.hostPlatform.system == "x86_64-linux" || stdenv.hostPlatform.system == "x86_64-darwin" then "x86-64"
     else if stdenv.hostPlatform.system == "armv7l-linux" then "armv7l"
-    else if stdenv.hostPlatform.system == "aarch64-linux" then "aarch64"
-    else throw "ImageMagick is not supported on this platform.";
-
-  cfg = {
-    version = "7.0.8-22";
-    sha256 = "1ivljgf192xh7pq1apdic923pvcb3aq74mx8d4hi65hhc9748gv7";
-    patches = [];
-  };
+    else if stdenv.hostPlatform.system == "aarch64-linux"  || stdenv.hostPlatform.system == "aarch64-darwin" then "aarch64"
+    else if stdenv.hostPlatform.system == "powerpc64le-linux" then "ppc64le"
+    else null;
 in
 
 stdenv.mkDerivation rec {
-  name = "imagemagick-${version}";
-  inherit (cfg) version;
+  pname = "imagemagick";
+  version = "7.1.0-26";
 
   src = fetchFromGitHub {
     owner = "ImageMagick";
     repo = "ImageMagick";
-    rev = cfg.version;
-    inherit (cfg) sha256;
+    rev = version;
+    hash = "sha256-q1CL64cfyb5fN9aVYJfls+v0XRFd4jH+B8n+UJqPE1I=";
   };
-
-  patches = [ ./imagetragick.patch ] ++ cfg.patches;
 
   outputs = [ "out" "dev" "doc" ]; # bin/ isn't really big
   outputMan = "out"; # it's tiny
@@ -39,8 +34,12 @@ stdenv.mkDerivation rec {
 
   configureFlags =
     [ "--with-frozenpaths" ]
-    ++ [ "--with-gcc-arch=${arch}" ]
+    ++ (if arch != null then [ "--with-gcc-arch=${arch}" ] else [ "--without-gcc-arch" ])
     ++ lib.optional (librsvg != null) "--with-rsvg"
+    ++ lib.optional (liblqr1 != null) "--with-lqr"
+    # libjxl is broken on aarch64 (see meta.broken in libjxl) for now,
+    # let's disable it for now to unbreak the imagemagick build.
+    ++ lib.optional (libjxl != null && !stdenv.isAarch64) "--with-jxl"
     ++ lib.optionals (ghostscript != null)
       [ "--with-gs-font-dir=${ghostscript}/share/ghostscript/fonts"
         "--with-gslib"
@@ -49,15 +48,22 @@ stdenv.mkDerivation rec {
       [ "--enable-static" "--disable-shared" ] # due to libxml2 being without DLLs ATM
     ;
 
-  nativeBuildInputs = [ pkgconfig libtool ];
+  nativeBuildInputs = [ pkg-config libtool ];
 
   buildInputs =
-    [ zlib fontconfig freetype ghostscript
-      libpng libtiff libxml2 libheif djvulibre
+    [ zlib fontconfig freetype ghostscript potrace
+      liblqr1 libpng libraw libtiff libxml2 libheif djvulibre
     ]
+    # libjxl is broken on aarch64 (see meta.broken in libjxl) for now,
+    # let's disable it for now to unbreak the imagemagick build.
+    ++ lib.optionals (!stdenv.isAarch64)
+      [ libjxl ]
     ++ lib.optionals (!stdenv.hostPlatform.isMinGW)
       [ openexr librsvg openjpeg ]
-    ++ lib.optional stdenv.isDarwin ApplicationServices;
+    ++ lib.optionals stdenv.isDarwin [
+      ApplicationServices
+      Foundation
+    ];
 
   propagatedBuildInputs =
     [ bzip2 freetype libjpeg lcms2 ]
@@ -71,7 +77,7 @@ stdenv.mkDerivation rec {
     moveToOutput "lib/ImageMagick-*/config-Q16HDRI" "$dev" # includes configure params
     for file in "$dev"/bin/*-config; do
       substituteInPlace "$file" --replace pkg-config \
-        "PKG_CONFIG_PATH='$dev/lib/pkgconfig' '${pkgconfig}/bin/pkg-config'"
+        "PKG_CONFIG_PATH='$dev/lib/pkgconfig' '${pkg-config}/bin/${pkg-config.targetPrefix}pkg-config'"
     done
   '' + lib.optionalString (ghostscript != null) ''
     for la in $out/lib/*.la; do
@@ -79,11 +85,15 @@ stdenv.mkDerivation rec {
     done
   '';
 
-  meta = with stdenv.lib; {
-    homepage = http://www.imagemagick.org/;
+  passthru.tests.version =
+    testVersion { package = imagemagick; };
+
+  meta = with lib; {
+    homepage = "http://www.imagemagick.org/";
     description = "A software suite to create, edit, compose, or convert bitmap images";
     platforms = platforms.linux ++ platforms.darwin;
+    maintainers = with maintainers; [ erictapen dotlambda ];
     license = licenses.asl20;
-    maintainers = with maintainers; [ the-kenny ];
+    mainProgram = "magick";
   };
 }

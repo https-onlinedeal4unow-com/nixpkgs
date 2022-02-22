@@ -1,34 +1,30 @@
-{stdenv, fetchurl
+{lib, stdenv, fetchFromGitHub
 , curl, makeWrapper, which, unzip
 , lua
 # for 'luarocks pack'
 , zip
 # some packages need to be compiled with cmake
 , cmake
+, installShellFiles
 }:
 
-let
-  s = # Generated upstream information
-  rec {
-    baseName="luarocks";
-    version="2.4.4";
-    name="${baseName}-${version}";
-    hash="0d7rl60dwh52qh5pfsphgx5ypp7k190h9ri6qpr2yx9kvqrxyf1r";
-    url="http://luarocks.org/releases/luarocks-2.4.4.tar.gz";
-    sha256="0d7rl60dwh52qh5pfsphgx5ypp7k190h9ri6qpr2yx9kvqrxyf1r";
-  };
-  buildInputs = [
-    lua curl makeWrapper which unzip
-  ];
-in
+stdenv.mkDerivation rec {
+  pname = "luarocks";
+  version = "3.2.1";
 
-stdenv.mkDerivation {
-  inherit (s) name version;
-  inherit buildInputs;
-  src = fetchurl {
-    inherit (s) url sha256;
+  src = fetchFromGitHub {
+    owner = "luarocks";
+    repo = "luarocks";
+    rev = "v${version}";
+    sha256 = "0viiafmb8binksda79ah828q1dfnb6jsqlk7vyndl2xvx9yfn4y2";
   };
-  patches = [ ./darwin.patch ];
+
+  patches = [ ./darwin-3.1.3.patch ];
+
+  postPatch = lib.optionalString stdenv.targetPlatform.isDarwin ''
+    substituteInPlace src/luarocks/core/cfg.lua --subst-var-by 'darwinMinVersion' '${stdenv.targetPlatform.darwinMinVersion}'
+  '';
+
   preConfigure = ''
     lua -e "" || {
         luajit -e "" && {
@@ -41,6 +37,11 @@ stdenv.mkDerivation {
         configureFlags="$configureFlags --with-lua-include=$lua_inc"
     fi
   '';
+
+  nativeBuildInputs = [ makeWrapper installShellFiles ];
+
+  buildInputs = [ lua curl which ];
+
   postInstall = ''
     sed -e "1s@.*@#! ${lua}/bin/lua$LUA_SUFFIX@" -i "$out"/bin/*
     for i in "$out"/bin/*; do
@@ -52,6 +53,9 @@ stdenv.mkDerivation {
               --suffix LUA_CPATH ";" "$(echo "$out"/share/lua/*/)?/init.lua"
         }
     done
+
+    installShellCompletion --cmd luarocks --bash <($out/bin/luarocks completion bash)
+    installShellCompletion --cmd luarocks --zsh <($out/bin/luarocks completion zsh)
   '';
 
   propagatedBuildInputs = [ zip unzip cmake ];
@@ -67,11 +71,11 @@ stdenv.mkDerivation {
     export LUA_PATH="src/?.lua;''${LUA_PATH:-}"
   '';
 
-  meta = with stdenv.lib; {
-    inherit (s) version;
-    description = ''A package manager for Lua'';
+  meta = with lib; {
+    description = "A package manager for Lua";
     license = licenses.mit ;
     maintainers = with maintainers; [raskin teto];
     platforms = platforms.linux ++ platforms.darwin;
+    downloadPage = "http://luarocks.org/releases/";
   };
 }

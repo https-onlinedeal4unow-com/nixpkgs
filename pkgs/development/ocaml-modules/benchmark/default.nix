@@ -1,9 +1,8 @@
-{ stdenv, fetchzip, ocaml, findlib, ocamlbuild, ocaml_pcre }:
+{ stdenv, lib, fetchzip, ocaml, findlib, ocamlbuild, ocaml_pcre }:
 
-let version = "1.4"; in
-
-stdenv.mkDerivation {
-  name = "ocaml${ocaml.version}-benchmark-${version}";
+stdenv.mkDerivation rec {
+  pname = "ocaml${ocaml.version}-benchmark";
+  version = "1.4";
 
   src = fetchzip {
     url = "https://github.com/Chris00/ocaml-benchmark/releases/download/${version}/benchmark-${version}.tar.gz";
@@ -15,10 +14,10 @@ stdenv.mkDerivation {
   createFindlibDestdir = true;
 
   meta = {
-    homepage = http://ocaml-benchmark.forge.ocamlcore.org/;
+    homepage = "http://ocaml-benchmark.forge.ocamlcore.org/";
     platforms = ocaml.meta.platforms or [];
     description = "Benchmark running times of code";
-    license = stdenv.lib.licenses.lgpl21;
-    maintainers = with stdenv.lib.maintainers; [ volth ];
+    license = lib.licenses.lgpl21;
+    maintainers = with lib.maintainers; [ volth ];
   };
 }

@@ -1,14 +1,11 @@
-{ stdenv, skawarePackages }:
+{ skawarePackages }:
 
 with skawarePackages;
 
-let
+buildPackage {
   pname = "s6-portable-utils";
-
-in buildPackage {
-  pname = pname;
-  version = "2.2.1.2";
-  sha256 = "0if77z07rfygd1yk9d2abxkdbx3dg52vcjhb20isb8kvqxhkg8ih";
+  version = "2.2.3.4";
+  sha256 = "04n9i9ydaa3cb3pip9d02dm24k26v3djvwrafjzq5qx94zvrifip";
 
   description = "A set of tiny general Unix utilities optimized for simplicity and small size";
 
@@ -28,7 +25,7 @@ in buildPackage {
     rm $(find -name "s6-*" -type f -mindepth 1 -maxdepth 1 -executable)
     rm seekablepipe
 
-    mv doc $doc/share/doc/${pname}/html
+    mv doc $doc/share/doc/s6-portable-utils/html
   '';
 
 

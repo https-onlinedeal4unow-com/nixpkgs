@@ -1,23 +1,30 @@
-{ stdenv, buildGoPackage, fetchzip }:
+{ lib, buildGoPackage, fetchzip }:
 
 buildGoPackage rec {
-  name = "wireguard-go-${version}";
-  version = "0.0.20181001";
+  pname = "wireguard-go";
+  version = "0.0.20210424";
 
-  goPackagePath = "git.zx2c4.com/wireguard-go";
+  goPackagePath = "golang.zx2c4.com/wireguard";
 
   src = fetchzip {
     url = "https://git.zx2c4.com/wireguard-go/snapshot/wireguard-go-${version}.tar.xz";
-    sha256 = "0yh9f58xn8kcq3wgx2s8j19k2h1vbmg70fn5gvw9k98f5mzynls3";
+    sha256 = "RUUueSsfEi1H+ckrnPKqbVlWONhCplMMftlyAmwK+ss=";
   };
 
   goDeps = ./deps.nix;
 
-  meta = with stdenv.lib; {
+  passthru.updateScript = ./update.sh;
+
+  postInstall = ''
+    mv $out/bin/wireguard $out/bin/wireguard-go
+  '';
+
+  doCheck = true;
+
+  meta = with lib; {
     description = "Userspace Go implementation of WireGuard";
-    homepage = https://git.zx2c4.com/wireguard-go/about/;
-    license = licenses.gpl2;
-    maintainers = with maintainers; [ kirelagin yegortimoshenko zx2c4 ];
-    platforms = platforms.darwin;
+    homepage = "https://git.zx2c4.com/wireguard-go/about/";
+    license = licenses.mit;
+    maintainers = with maintainers; [ elseym kirelagin yana zx2c4 ];
   };
 }

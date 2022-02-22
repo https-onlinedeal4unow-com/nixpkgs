@@ -1,108 +1,142 @@
-{ stdenv, libXcomposite, libgnome-keyring, makeWrapper, udev, curl, alsaLib
-, libXfixes, atk, gtk3, libXrender, pango, gnome2, cairo, freetype, fontconfig
+{ lib, stdenv, libXcomposite, libgnome-keyring, makeWrapper, udev, curl, alsa-lib
+, libXfixes, atk, gtk3, libXrender, pango, gnome, cairo, freetype, fontconfig
 , libX11, libXi, libxcb, libXext, libXcursor, glib, libXScrnSaver, libxkbfile, libXtst
-, nss, nspr, cups, fetchurl, expat, gdk_pixbuf, libXdamage, libXrandr, dbus
-, dpkg, makeDesktopItem, openssl
+, nss, nspr, cups, fetchzip, expat, gdk-pixbuf, libXdamage, libXrandr, dbus
+, makeDesktopItem, openssl, wrapGAppsHook, at-spi2-atk, at-spi2-core, libuuid
+, e2fsprogs, krb5, libdrm, mesa, unzip, copyDesktopItems
 }:
 
-with stdenv.lib;
+with lib;
 
 let
-  curlWithGnuTls = curl.override { gnutlsSupport = true; sslSupport = false; };
-in
-stdenv.mkDerivation rec {
-  name = "gitkraken-${version}";
-  version = "4.2.1";
+  curlWithGnuTls = curl.override { gnutlsSupport = true; opensslSupport = false; };
+  pname = "gitkraken";
+  version = "8.2.1";
 
-  src = fetchurl {
-    url = "https://release.axocdn.com/linux/GitKraken-v${version}.deb";
-    sha256 = "07f9h3276bs7m22vwpxrxmlwnq7l5inr2l67nmpiaz1569yabwsg";
+  throwSystem = throw "Unsupported system: ${stdenv.hostPlatform.system}";
+
+  srcs = {
+    x86_64-linux = fetchzip {
+      url = "https://release.axocdn.com/linux/GitKraken-v${version}.tar.gz";
+      sha256 = "sha256-FjG7htwMRLZmwH6OjjyHkGUTaVNzuMTn6BjXUnCgwAA=";
+    };
+
+    x86_64-darwin = fetchzip {
+      url = "https://release.axocdn.com/darwin/GitKraken-v${version}.zip";
+      sha256 = "sha256-cBZ53lekhPl5yjxclg2PeMCL0NKwshkKhP/lFbEinCs=";
+    };
+
+    aarch64-darwin = srcs.x86_64-darwin;
   };
 
-  libPath = makeLibraryPath [
-    stdenv.cc.cc.lib
-    curlWithGnuTls
-    udev
-    libX11
-    libXext
-    libXcursor
-    libXi
-    libxcb
-    glib
-    libXScrnSaver
-    libxkbfile
-    libXtst
-    nss
-    nspr
-    cups
-    alsaLib
-    expat
-    gdk_pixbuf
-    dbus
-    libXdamage
-    libXrandr
-    atk
-    pango
-    cairo
-    freetype
-    fontconfig
-    libXcomposite
-    libXfixes
-    libXrender
-    gtk3
-    gnome2.GConf
-    libgnome-keyring
-    openssl
-  ];
-
-  desktopItem = makeDesktopItem {
-    name = "gitkraken";
-    exec = "gitkraken";
-    icon = "gitkraken";
-    desktopName = "GitKraken";
-    genericName = "Git Client";
-    categories = "Application;Development;";
-    comment = "Graphical Git client from Axosoft";
-  };
-
-  nativeBuildInputs = [ makeWrapper ];
-  buildInputs = [ dpkg ];
-
-  unpackCmd = ''
-    mkdir out
-    dpkg -x $curSrc out
-  '';
-
-  installPhase = ''
-    mkdir $out
-    pushd usr
-    pushd share
-    substituteInPlace applications/gitkraken.desktop \
-      --replace /usr/share/gitkraken $out/bin \
-      --replace Icon=app Icon=gitkraken
-    mv pixmaps/app.png pixmaps/gitkraken.png
-    popd
-    rm -rf bin/gitkraken share/lintian
-    cp -av share bin $out/
-    popd
-    ln -s $out/share/gitkraken/gitkraken $out/bin/gitkraken
-  '';
-
-  postFixup = ''
-    pushd $out/share/gitkraken
-    patchelf --set-interpreter "$(cat $NIX_CC/nix-support/dynamic-linker)" gitkraken
-
-    for file in $(find . -type f \( -name \*.node -o -name gitkraken -o -name \*.so\* \) ); do
-      patchelf --set-rpath ${libPath}:$out/share/gitkraken $file || true
-    done
-    popd
-  '';
+  src = srcs.${stdenv.hostPlatform.system} or throwSystem;
 
   meta = {
-    homepage = https://www.gitkraken.com/;
+    homepage = "https://www.gitkraken.com/";
     description = "The downright luxurious and most popular Git client for Windows, Mac & Linux";
     license = licenses.unfree;
-    platforms = platforms.linux;
-    maintainers = with maintainers; [ xnwdd ];
+    platforms = builtins.attrNames srcs;
+    maintainers = with maintainers; [ xnwdd evanjs arkivm ];
   };
-}
+
+  linux = stdenv.mkDerivation rec {
+    inherit pname version src meta;
+
+    dontBuild = true;
+    dontConfigure = true;
+
+    libPath = makeLibraryPath [
+      stdenv.cc.cc.lib
+      curlWithGnuTls
+      udev
+      libX11
+      libXext
+      libXcursor
+      libXi
+      libxcb
+      glib
+      libXScrnSaver
+      libxkbfile
+      libXtst
+      nss
+      nspr
+      cups
+      alsa-lib
+      expat
+      gdk-pixbuf
+      dbus
+      libXdamage
+      libXrandr
+      atk
+      pango
+      cairo
+      freetype
+      fontconfig
+      libXcomposite
+      libXfixes
+      libXrender
+      gtk3
+      libgnome-keyring
+      openssl
+      at-spi2-atk
+      at-spi2-core
+      libuuid
+      e2fsprogs
+      krb5
+      libdrm
+      mesa
+    ];
+
+    desktopItems = [ (makeDesktopItem {
+      name = pname;
+      exec = pname;
+      icon = pname;
+      desktopName = "GitKraken";
+      genericName = "Git Client";
+      categories = "Development;";
+      comment = "Graphical Git client from Axosoft";
+    }) ];
+
+    nativeBuildInputs = [ copyDesktopItems makeWrapper wrapGAppsHook ];
+    buildInputs = [ gtk3 gnome.adwaita-icon-theme ];
+
+    installPhase = ''
+      runHook preInstall
+
+      mkdir -p $out/share/${pname}/
+      cp -R $src/* $out/share/${pname}
+
+      mkdir -p $out/bin
+      ln -s $out/share/${pname}/${pname} $out/bin/
+
+      mkdir -p $out/share/pixmaps
+      cp ${pname}.png $out/share/pixmaps/${pname}.png
+
+      runHook postInstall
+    '';
+
+    postFixup = ''
+      pushd $out/share/${pname}
+      patchelf --set-interpreter "$(cat $NIX_CC/nix-support/dynamic-linker)" ${pname}
+
+      for file in $(find . -type f \( -name \*.node -o -name ${pname} -o -name \*.so\* \) ); do
+        patchelf --set-rpath ${libPath}:$out/share/${pname} $file || true
+      done
+      popd
+    '';
+  };
+
+  darwin = stdenv.mkDerivation {
+    inherit pname version src meta;
+
+    nativeBuildInputs = [ unzip ];
+
+    installPhase = ''
+      mkdir -p $out/Applications/GitKraken.app
+      cp -R . $out/Applications/GitKraken.app
+    '';
+  };
+in
+if stdenv.isDarwin
+then darwin
+else linux

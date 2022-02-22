@@ -1,28 +1,38 @@
-{ stdenv, fetchFromGitHub, python3Packages
-, hackrf, rtl-sdr, airspy, limesuite }:
+{ lib, fetchFromGitHub, python3Packages
+, hackrf, rtl-sdr, airspy, limesuite, libiio
+, libbladeRF
+, qt5
+, USRPSupport ? false, uhd }:
 
 python3Packages.buildPythonApplication rec {
-  name = "urh-${version}";
-  version = "2.5.5";
+  pname = "urh";
+  version = "2.9.2";
 
   src = fetchFromGitHub {
     owner = "jopohl";
-    repo = "urh";
+    repo = pname;
     rev = "v${version}";
-    sha256 = "14aw8bvqb32976qmm124i5sv99nwv1jvs1r9ylbsmlg31dvla7ql";
+    sha256 = "0ibcr2ypnyl2aq324sbmmr18ksxszg81yrhybawx46ba9vym6j99";
   };
 
-  buildInputs = [ hackrf rtl-sdr airspy limesuite ];
+  nativeBuildInputs = [ qt5.wrapQtAppsHook ];
+  buildInputs = [ hackrf rtl-sdr airspy limesuite libiio libbladeRF ]
+    ++ lib.optional USRPSupport uhd;
+
   propagatedBuildInputs = with python3Packages; [
-    pyqt5 numpy psutil cython pyzmq
+    pyqt5 numpy psutil cython pyzmq pyaudio setuptools
   ];
+
+  postFixup = ''
+    wrapQtApp $out/bin/urh
+  '';
 
   doCheck = false;
 
-  meta = with stdenv.lib; {
-    inherit (src.meta) homepage;
+  meta = with lib; {
+    homepage = "https://github.com/jopohl/urh";
     description = "Universal Radio Hacker: investigate wireless protocols like a boss";
-    license = licenses.asl20;
+    license = licenses.gpl3;
     platforms = platforms.linux;
     maintainers = with maintainers; [ fpletz ];
   };

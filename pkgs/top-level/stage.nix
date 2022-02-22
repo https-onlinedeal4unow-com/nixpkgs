@@ -15,24 +15,29 @@
   # Utility functions, could just import but passing in for efficiency
   lib
 
-, # Use to reevaluate Nixpkgs; a dirty hack that should be removed
+, # Use to reevaluate Nixpkgs
   nixpkgsFun
 
   ## Other parameters
   ##
 
-, # The package set used at build-time. If null, `buildPackages` will
-  # be defined internally as the final produced package set itself. This allows
-  # us to avoid expensive splicing.
-  buildPackages
-
-, # The package set used in the next stage. If null, `targetPackages` will be
-  # defined internally as the final produced package set itself, just like with
-  # `buildPackages` and for the same reasons.
+, # Either null or an object in the form:
   #
-  # THIS IS A HACK for compilers that don't think critically about cross-
-  # compilation. Please do *not* use unless you really know what you are doing.
-  targetPackages
+  #   {
+  #     pkgsBuildBuild = ...;
+  #     pkgsBuildHost = ...;
+  #     pkgsBuildTarget = ...;
+  #     pkgsHostHost = ...;
+  #     # pkgsHostTarget skipped on purpose.
+  #     pkgsTargetTarget ...;
+  #   }
+  #
+  # These are references to adjacent bootstrapping stages. The more familiar
+  # `buildPackages` and `targetPackages` are defined in terms of them. If null,
+  # they are instead defined internally as the current stage. This allows us to
+  # avoid expensive splicing. `pkgsHostTarget` is skipped because it is always
+  # defined as the current stage.
+  adjacentPackages
 
 , # The standard environment to use for building packages.
   stdenv
@@ -60,20 +65,50 @@
 
 let
   stdenvAdapters = self: super:
-    let res = import ../stdenv/adapters.nix self; in res // {
+    let
+      res = import ../stdenv/adapters.nix {
+        inherit lib config;
+        pkgs = self;
+      };
+    in res // {
       stdenvAdapters = res;
     };
 
   trivialBuilders = self: super:
     import ../build-support/trivial-builders.nix {
-      inherit lib; inherit (self) stdenv stdenvNoCC; inherit (self.xorg) lndir;
+      inherit lib;
+      inherit (self) runtimeShell stdenv stdenvNoCC;
+      inherit (self.pkgsBuildHost) shellcheck;
+      inherit (self.pkgsBuildHost.xorg) lndir;
     };
 
-  stdenvBootstappingAndPlatforms = self: super: {
-    buildPackages = (if buildPackages == null then self else buildPackages)
+  stdenvBootstappingAndPlatforms = self: super: let
+    withFallback = thisPkgs:
+      (if adjacentPackages == null then self else thisPkgs)
       // { recurseForDerivations = false; };
-    targetPackages = (if targetPackages == null then self else targetPackages)
-      // { recurseForDerivations = false; };
+  in {
+    # Here are package sets of from related stages. They are all in the form
+    # `pkgs{theirHost}{theirTarget}`. For example, `pkgsBuildHost` means their
+    # host platform is our build platform, and their target platform is our host
+    # platform. We only care about their host/target platforms, not their build
+    # platform, because the the former two alone affect the interface of the
+    # final package; the build platform is just an implementation detail that
+    # should not leak.
+    pkgsBuildBuild = withFallback adjacentPackages.pkgsBuildBuild;
+    pkgsBuildHost = withFallback adjacentPackages.pkgsBuildHost;
+    pkgsBuildTarget = withFallback adjacentPackages.pkgsBuildTarget;
+    pkgsHostHost = withFallback adjacentPackages.pkgsHostHost;
+    pkgsHostTarget = self // { recurseForDerivations = false; }; # always `self`
+    pkgsTargetTarget = withFallback adjacentPackages.pkgsTargetTarget;
+
+    # Older names for package sets. Use these when only the host platform of the
+    # package set matter (i.e. use `buildPackages` where any of `pkgsBuild*`
+    # would do, and `targetPackages` when any of `pkgsTarget*` would do (if we
+    # had more than just `pkgsTargetTarget`).)
+    buildPackages = self.pkgsBuildHost;
+    pkgs = self.pkgsHostTarget;
+    targetPackages = self.pkgsTargetTarget;
+
     inherit stdenv;
   };
 
@@ -83,14 +118,13 @@ let
     inherit (super.stdenv) buildPlatform hostPlatform targetPlatform;
   in {
     inherit buildPlatform hostPlatform targetPlatform;
-    inherit (hostPlatform) system;
   };
 
-  splice = self: super: import ./splice.nix lib self (buildPackages != null);
+  splice = self: super: import ./splice.nix lib self (adjacentPackages != null);
 
   allPackages = self: super:
     let res = import ./all-packages.nix
-      { inherit lib noSysDirs config; }
+      { inherit lib noSysDirs config overlays; }
       res self super;
     in res;
 
@@ -123,25 +157,42 @@ let
   otherPackageSets = self: super: {
     # This maps each entry in lib.systems.examples to its own package
     # set. Each of these will contain all packages cross compiled for
-    # that target system. For instance, pkgsCross.rasberryPi.hello,
+    # that target system. For instance, pkgsCross.raspberryPi.hello,
     # will refer to the "hello" package built for the ARM6-based
     # Raspberry Pi.
     pkgsCross = lib.mapAttrs (n: crossSystem:
                               nixpkgsFun { inherit crossSystem; })
                               lib.systems.examples;
 
+    pkgsLLVM = nixpkgsFun {
+      overlays = [
+        (self': super': {
+          pkgsLLVM = super';
+        })
+      ] ++ overlays;
+      # Bootstrap a cross stdenv using the LLVM toolchain.
+      # This is currently not possible when compiling natively,
+      # so we don't need to check hostPlatform != buildPlatform.
+      crossSystem = stdenv.hostPlatform // {
+        useLLVM = true;
+        linker = "lld";
+      };
+    };
+
     # All packages built with the Musl libc. This will override the
     # default GNU libc on Linux systems. Non-Linux systems are not
     # supported.
     pkgsMusl = if stdenv.hostPlatform.isLinux then nixpkgsFun {
-      inherit overlays config;
+      overlays = [ (self': super': {
+        pkgsMusl = super';
+      })] ++ overlays;
       ${if stdenv.hostPlatform == stdenv.buildPlatform
         then "localSystem" else "crossSystem"} = {
         parsed = stdenv.hostPlatform.parsed // {
           abi = {
-            "gnu" = lib.systems.parse.abis.musl;
-            "gnueabi" = lib.systems.parse.abis.musleabi;
-            "gnueabihf" = lib.systems.parse.abis.musleabihf;
+            gnu = lib.systems.parse.abis.musl;
+            gnueabi = lib.systems.parse.abis.musleabi;
+            gnueabihf = lib.systems.parse.abis.musleabihf;
           }.${stdenv.hostPlatform.parsed.abi.name}
             or lib.systems.parse.abis.musl;
         };
@@ -151,7 +202,9 @@ let
     # All packages built for i686 Linux.
     # Used by wine, firefox with debugging version of Flash, ...
     pkgsi686Linux = if stdenv.hostPlatform.isLinux && stdenv.hostPlatform.isx86 then nixpkgsFun {
-      inherit overlays config;
+      overlays = [ (self': super': {
+        pkgsi686Linux = super';
+      })] ++ overlays;
       ${if stdenv.hostPlatform == stdenv.buildPlatform
         then "localSystem" else "crossSystem"} = {
         parsed = stdenv.hostPlatform.parsed // {
@@ -166,8 +219,11 @@ let
     appendOverlays = extraOverlays:
       if extraOverlays == []
       then self
-      else import ./stage.nix (args // { overlays = args.overlays ++ extraOverlays; });
+      else nixpkgsFun { overlays = args.overlays ++ extraOverlays; };
 
+    # NOTE: each call to extend causes a full nixpkgs rebuild, adding ~130MB
+    #       of allocations. DO NOT USE THIS IN NIXPKGS.
+    #
     # Extend the package set with a single overlay. This preserves
     # preexisting overlays. Prefer to initialize with the right overlays
     # in one go when calling Nixpkgs, for performance and simplicity.
@@ -177,17 +233,24 @@ let
     # Fully static packages.
     # Currently uses Musl on Linux (couldn’t get static glibc to work).
     pkgsStatic = nixpkgsFun ({
-      crossOverlays = [ (import ./static.nix) ];
+      overlays = [ (self': super': {
+        pkgsStatic = super';
+      })] ++ overlays;
     } // lib.optionalAttrs stdenv.hostPlatform.isLinux {
       crossSystem = {
+        isStatic = true;
         parsed = stdenv.hostPlatform.parsed // {
           abi = {
-            "gnu" = lib.systems.parse.abis.musl;
-            "gnueabi" = lib.systems.parse.abis.musleabi;
-            "gnueabihf" = lib.systems.parse.abis.musleabihf;
+            gnu = lib.systems.parse.abis.musl;
+            gnueabi = lib.systems.parse.abis.musleabi;
+            gnueabihf = lib.systems.parse.abis.musleabihf;
+            musleabi = lib.systems.parse.abis.musleabi;
+            musleabihf = lib.systems.parse.abis.musleabihf;
           }.${stdenv.hostPlatform.parsed.abi.name}
             or lib.systems.parse.abis.musl;
         };
+      } // lib.optionalAttrs (stdenv.hostPlatform.system == "powerpc64-linux") {
+        gcc.abi = "elfv2";
       };
     });
   };

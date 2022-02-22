@@ -1,23 +1,25 @@
-{ buildGoPackage, fetchFromGitHub, lib }:
+{ buildGoModule, fetchFromGitHub, lib }:
 
-buildGoPackage rec {
-  name = "pet-${version}";
-  version = "0.3.2";
-
-  goPackagePath = "github.com/knqyf263/pet";
+buildGoModule rec {
+  pname = "pet";
+  version = "0.4.0";
 
   src = fetchFromGitHub {
     owner = "knqyf263";
     repo = "pet";
     rev = "v${version}";
-    sha256 = "1zv2jfgh5nqd4cwr1ljm5p4rqam7hq3a6asfmhr3lcnp7sz9b8fr";
+    sha256 = "sha256-gVTpzmXekQxGMucDKskGi+e+34nJwwsXwvQTjRO6Gdg=";
   };
 
-  goDeps = ./deps.nix;
+  vendorSha256 = "sha256-dUvp7FEW09V0xMuhewPGw3TuAic/sD7xyXEYviZ2Ivs=";
+
+  doCheck = false;
+
+  subPackages = [ "." ];
 
   meta = with lib; {
     description = "Simple command-line snippet manager, written in Go";
-    homepage = https://github.com/knqyf263/pet;
+    homepage = "https://github.com/knqyf263/pet";
     license = licenses.mit;
     maintainers = with maintainers; [ kalbasit ];
     platforms = platforms.linux ++ platforms.darwin;

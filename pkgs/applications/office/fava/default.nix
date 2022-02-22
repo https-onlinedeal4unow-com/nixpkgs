@@ -1,37 +1,49 @@
-{ stdenv, python3, beancount }:
+{ lib, python3 }:
 
-let
-  inherit (python3.pkgs) buildPythonApplication fetchPypi;
-in
-buildPythonApplication rec {
+python3.pkgs.buildPythonApplication rec {
   pname = "fava";
-  version = "1.9";
+  version = "1.19";
 
-  src = fetchPypi {
+  src = python3.pkgs.fetchPypi {
     inherit pname version;
-    sha256 = "115r99l6xfliafgkpcf0mndqrvijix5mflg2i56s7xwqr3ch8z9k";
+    sha256 = "def7c0210bf0ce8dfffdb46ce21b3efcf71eba5a4e903565258419e4c53c2d43";
   };
 
-  doCheck = false;
+  nativeBuildInputs = with python3.pkgs; [ setuptools-scm ];
 
-  propagatedBuildInputs = with python3.pkgs;
-    [ 
-      Babel
-      cheroot
-      flaskbabel
-      flask
-      jinja2
-      beancount
-      click
-      markdown2
-      ply
-      simplejson
-    ];
+  propagatedBuildInputs = with python3.pkgs; [
+    Babel
+    beancount
+    cheroot
+    click
+    flask
+    flaskbabel
+    jaraco_functools
+    jinja2
+    markdown2
+    ply
+    simplejson
+    werkzeug
+  ];
 
-  meta = {
-    homepage = https://beancount.github.io/fava;
+  checkInputs = with python3.pkgs; [
+    pytestCheckHook
+  ];
+
+  preCheck = ''
+    export HOME=$TEMPDIR
+  '';
+
+  disabledTests = [
+    # runs fava in debug mode, which tries to interpret bash wrapper as Python
+    "test_cli"
+  ];
+
+  meta = with lib; {
     description = "Web interface for beancount";
-    license = stdenv.lib.licenses.mit;
-    maintainers = with stdenv.lib.maintainers; [ matthiasbeyer ];
+    homepage = "https://beancount.github.io/fava";
+    changelog = "https://beancount.github.io/fava/changelog.html";
+    license = licenses.mit;
+    maintainers = with maintainers; [ bhipple ];
   };
 }

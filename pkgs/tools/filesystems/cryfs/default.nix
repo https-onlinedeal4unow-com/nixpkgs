@@ -1,79 +1,80 @@
-{ stdenv, fetchFromGitHub
-, cmake, pkgconfig, coreutils
-, boost, cryptopp, curl, fuse, openssl, python, spdlog
+{ lib, stdenv, fetchFromGitHub
+, cmake, pkg-config, python3
+, boost175, curl, fuse, openssl, range-v3, spdlog
+# cryptopp and gtest on standby - using the vendored ones for now
+# see https://github.com/cryfs/cryfs/issues/369
+, llvmPackages
 }:
 
 stdenv.mkDerivation rec {
-  name = "cryfs-${version}";
-  version = "0.9.9";
+  pname = "cryfs";
+  version = "0.11.1";
 
   src = fetchFromGitHub {
-    owner  = "cryfs";
-    repo   = "cryfs";
-    rev    = "${version}";
-    sha256 = "07f2k2b595m3vkwwlmlc0m7px0nwrrzrph3z6sss9354m0b0lcri";
+    owner = pname;
+    repo = pname;
+    rev = version;
+    hash = "sha256-029foKJklyOv8qHvgds/yRZ9n1/iA+U7n4O5FViHCOE=";
   };
 
-  prePatch = ''
+  postPatch = ''
     patchShebangs src
 
-    substituteInPlace vendor/scrypt/CMakeLists.txt \
-      --replace /usr/bin/ ""
+    # remove tests that require network access
+    substituteInPlace test/cpp-utils/CMakeLists.txt \
+      --replace "network/CurlHttpClientTest.cpp" "" \
+      --replace "network/FakeHttpClientTest.cpp" ""
 
-    # scrypt in nixpkgs only produces a binary so we lift the patching from that so allow
-    # building the vendored version. This is very much NOT DRY.
-    # The proper solution is to have scrypt generate a dev output with the required files and just symlink
-    # into vendor/scrypt
-    for f in Makefile.in autocrap/Makefile.am libcperciva/cpusupport/Build/cpusupport.sh ; do
-      substituteInPlace vendor/scrypt/scrypt-*/scrypt/$f --replace "command -p " ""
-    done
+    # remove CLI test trying to access /dev/fuse
+    substituteInPlace test/cryfs-cli/CMakeLists.txt \
+      --replace "CliTest_IntegrityCheck.cpp" "" \
+      --replace "CliTest_Setup.cpp" "" \
+      --replace "CliTest_WrongEnvironment.cpp" "" \
+      --replace "CryfsUnmountTest.cpp" ""
 
-    # cryfs is vendoring an old version of spdlog
-    rm -rf vendor/spdlog/spdlog
-    ln -s ${spdlog} vendor/spdlog/spdlog
+    # downsize large file test as 4.5G is too big for Hydra
+    substituteInPlace test/cpp-utils/data/DataTest.cpp \
+      --replace "(4.5L*1024*1024*1024)" "(0.5L*1024*1024*1024)"
   '';
 
-  buildInputs = [ boost cryptopp curl fuse openssl python spdlog ];
+  nativeBuildInputs = [ cmake pkg-config python3 ];
 
-  patches = [
-    ./test-no-network.patch  # Disable tests using external networking
-    ./skip-failing-test-large-malloc.patch
-  ];
+  strictDeps = true;
 
-  # coreutils is needed for the vendored scrypt
-  nativeBuildInputs = [ cmake coreutils pkgconfig ];
+  buildInputs = [ boost175 curl fuse openssl range-v3 spdlog ]
+    ++ lib.optional stdenv.cc.isClang llvmPackages.openmp;
 
-  enableParallelBuilding = true;
+  #checkInputs = [ gtest ];
 
   cmakeFlags = [
-    "-DCRYFS_UPDATE_CHECKS=OFF"
-    "-DBoost_USE_STATIC_LIBS=OFF" # this option is case sensitive
-    "-DBUILD_TESTING=ON"
-  ];
+    "-DDEPENDENCY_CONFIG='../cmake-utils/DependenciesFromLocalSystem.cmake'"
+    "-DCRYFS_UPDATE_CHECKS:BOOL=FALSE"
+    "-DBoost_USE_STATIC_LIBS:BOOL=FALSE" # this option is case sensitive
+    "-DBUILD_TESTING:BOOL=${if doCheck then "TRUE" else "FALSE"}"
+  ]; # ++ lib.optional doCheck "-DCMAKE_PREFIX_PATH=${gtest.dev}/lib/cmake";
 
-  doCheck = true;
+  # macFUSE needs to be installed for the test to succeed on Darwin
+  doCheck = !stdenv.isDarwin;
 
-  # Cryfs tests are broken on darwin
-  checkPhase = stdenv.lib.optionalString (!stdenv.isDarwin) ''
+  checkPhase = ''
+    runHook preCheck
+    export HOME=$(mktemp -d)
+
     # Skip CMakeFiles directory and tests depending on fuse (does not work well with sandboxing)
-    SKIP_IMPURE_TESTS="CMakeFiles|fspp|cryfs-cli"
+    SKIP_IMPURE_TESTS="CMakeFiles|fspp|my-gtest-main"
 
-    for test in `ls -d test/*/ | egrep -v "$SKIP_IMPURE_TESTS"`; do
-      "./$test`basename $test`-test"
+    for t in $(ls -d test/*/ | grep -E -v "$SKIP_IMPURE_TESTS") ; do
+      "./$t$(basename $t)-test"
     done
+
+    runHook postCheck
   '';
 
-  installPhase = ''
-    # Building with BUILD_TESTING=ON is missing the install target
-    mkdir -p $out/bin
-    install -m 755 ./src/cryfs-cli/cryfs $out/bin/cryfs
-  '';
-
-  meta = with stdenv.lib; {
+  meta = with lib; {
     description = "Cryptographic filesystem for the cloud";
-    homepage    = https://www.cryfs.org;
+    homepage    = "https://www.cryfs.org/";
     license     = licenses.lgpl3;
-    maintainers = with maintainers; [ peterhoeg ];
-    platforms   = with platforms; linux;
+    maintainers = with maintainers; [ peterhoeg c0bw3b ];
+    platforms   = platforms.unix;
   };
 }

@@ -45,7 +45,7 @@ let
       astdatadir => /var/lib/asterisk
       astagidir => /var/lib/asterisk/agi-bin
       astspooldir => /var/spool/asterisk
-      astrundir => /var/run/asterisk
+      astrundir => /run/asterisk
       astlogdir => /var/log/asterisk
       astsbindir => ${cfg.package}/sbin
     '';
@@ -115,7 +115,7 @@ in
       confFiles = mkOption {
         default = {};
         type = types.attrsOf types.str;
-        example = literalExample
+        example = literalExpression
           ''
             {
               "extensions.conf" = '''
@@ -200,7 +200,7 @@ in
       package = mkOption {
         type = types.package;
         default = pkgs.asterisk;
-        defaultText = "pkgs.asterisk";
+        defaultText = literalExpression "pkgs.asterisk";
         description = "The Asterisk package to use.";
       };
     };
@@ -257,7 +257,7 @@ in
         ExecReload = ''${cfg.package}/bin/asterisk -x "core reload"
           '';
         Type = "forking";
-        PIDFile = "/var/run/asterisk/asterisk.pid";
+        PIDFile = "/run/asterisk/asterisk.pid";
       };
     };
   };

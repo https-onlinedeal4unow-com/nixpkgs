@@ -1,7 +1,7 @@
-{ stdenv, writeText }:
+{ lib, stdenv, writeText, runtimeShell }:
 
 let script = writeText "script" ''
-  #!${stdenv.shell}
+  #!${runtimeShell}
 
   if command -v sendmail > /dev/null 2>&1 && [ "$(command -v sendmail)" != "{{MYPATH}}" ]; then
     exec sendmail "$@"
@@ -15,18 +15,21 @@ let script = writeText "script" ''
   fi
 ''; in
 stdenv.mkDerivation {
-  name = "system-sendmail-1.0";
+  pname = "system-sendmail";
+  version = "1.0";
 
   src = script;
 
-  phases = [ "buildPhase" ];
+  dontUnpack = true;
+  dontInstall = true;
+
   buildPhase = ''
     mkdir -p $out/bin
     < $src sed "s#{{MYPATH}}#$out/bin/sendmail#" > $out/bin/sendmail
     chmod +x $out/bin/sendmail
   '';
 
-  meta = with stdenv.lib; {
+  meta = with lib; {
     description = ''
       A sendmail wrapper that calls the system sendmail. Do not install as system-wide sendmail!
     '';

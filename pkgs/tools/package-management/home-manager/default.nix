@@ -1,18 +1,18 @@
 #Adapted from
-#https://github.com/rycee/home-manager/blob/9c1b3735b402346533449efc741f191d6ef578dd/home-manager/default.nix
+#https://github.com/rycee/home-manager/blob/2c07829be2bcae55e04997b19719ff902a44016d/home-manager/default.nix
 
-{ bash, coreutils, less, stdenv, makeWrapper, fetchFromGitHub }:
+{ bash, coreutils, findutils, gnused, less, gettext, nixos-option, lib, stdenv, makeWrapper, fetchFromGitHub }:
 
 stdenv.mkDerivation rec {
 
-  name = "home-manager-${version}";
-  version = "2018-11-04";
+  pname = "home-manager";
+  version = "2021-12-25";
 
   src = fetchFromGitHub {
-    owner = "rycee";
+    owner = "nix-community";
     repo = "home-manager";
-    rev = "05c93ff3ae13f1a2d90a279a890534cda7dc8ad6";
-    sha256 = "0ymfvjnnz98ynws3v6dcil1cmp7x2cmm6zy8yqgkn8z7wyrrqq0v";
+    rev = "48f2b381dd397ec88040d3354ac9c036739ba139";
+    sha256 = "1i9v94brh9vhyhzcqyfj64nzhaibdj0sw74pxgk4bcsp0hqawgcd";
   };
 
   nativeBuildInputs = [ makeWrapper ];
@@ -23,15 +23,35 @@ stdenv.mkDerivation rec {
 
     substituteInPlace $out/bin/home-manager \
       --subst-var-by bash "${bash}" \
-      --subst-var-by coreutils "${coreutils}" \
-      --subst-var-by less "${less}" \
-      --subst-var-by HOME_MANAGER_PATH '${src}'
+      --subst-var-by DEP_PATH "${
+        lib.makeBinPath [ coreutils findutils gettext gnused less nixos-option ]
+      }" \
+      --subst-var-by HOME_MANAGER_LIB '${src}/lib/bash/home-manager.sh' \
+      --subst-var-by HOME_MANAGER_PATH '${src}' \
+      --subst-var-by OUT "$out"
+
+    install -D -m755 ${src}/home-manager/completion.bash \
+      $out/share/bash-completion/completions/home-manager
+    install -D -m755 ${src}/home-manager/completion.zsh \
+      $out/share/zsh/site-functions/_home-manager
+    install -D -m755 ${src}/home-manager/completion.fish \
+      $out/share/fish/vendor_completions.d/home-manager.fish
+
+    install -D -m755 ${src}/lib/bash/home-manager.sh \
+      "$out/share/bash/home-manager.sh"
+
+    for path in ${src}/home-manager/po/*.po; do
+      lang="''${path##*/}"
+      lang="''${lang%%.*}"
+      mkdir -p "$out/share/locale/$lang/LC_MESSAGES"
+      ${gettext}/bin/msgfmt -o "$out/share/locale/$lang/LC_MESSAGES/home-manager.mo" "$path"
+    done
   '';
 
-  meta = with stdenv.lib; {
+  meta = with lib; {
     description = "A user environment configurator";
-    maintainers = with maintainers; [ rycee ];
-    platforms = platforms.linux;
+    homepage = "https://rycee.gitlab.io/home-manager/";
+    platforms = platforms.unix;
     license = licenses.mit;
   };
 

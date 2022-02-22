@@ -1,30 +1,49 @@
-{ stdenv
+{ lib, stdenv
 , buildPythonPackage
 , fetchFromGitHub
 , six
-, setuptools_scm
-, pkgs
+, setuptools-scm
+, xorg
+, python
+, mock
+, nose
+, pytestCheckHook
+, util-linux
 }:
 
 buildPythonPackage rec {
   pname = "xlib";
-  version = "0.17";
+  version = "0.31";
 
   src = fetchFromGitHub {
     owner = "python-xlib";
     repo = "python-xlib";
-    rev = "${version}";
-    sha256 = "1iiz2nq2hq9x6laavngvfngnmxbgnwh54wdbq6ncx4va7v98liyi";
+    rev = version;
+    sha256 = "155p9xhsk01z9vdml74h07svlqy6gljnx9c6qbydcr14lwghwn06";
   };
 
-  # Tests require `pyutil' so disable them to avoid circular references.
-  doCheck = false;
+  nativeBuildInputs = [ setuptools-scm ];
+  buildInputs = [ xorg.libX11 ];
+  propagatedBuildInputs = [ six ];
 
-  propagatedBuildInputs = [ six setuptools_scm pkgs.xorg.libX11 ];
+  doCheck = !stdenv.isDarwin;
+  checkInputs = [
+    pytestCheckHook
+    mock
+    nose
+    util-linux
+    xorg.xauth
+    xorg.xorgserver
+  ];
 
-  meta = with stdenv.lib; {
+  disabledTestPaths = [
+    # requires x session
+    "test/test_xlib_display.py"
+  ];
+
+  meta = with lib; {
     description = "Fully functional X client library for Python programs";
-    homepage = http://python-xlib.sourceforge.net/;
+    homepage = "http://python-xlib.sourceforge.net/";
     license = licenses.gpl2Plus;
   };
 

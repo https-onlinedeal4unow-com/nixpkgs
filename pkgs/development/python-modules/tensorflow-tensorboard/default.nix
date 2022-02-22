@@ -1,10 +1,20 @@
-{ stdenv, lib, fetchPypi, buildPythonPackage, isPy3k
+{ lib
+, fetchPypi
+, buildPythonPackage
+, pythonOlder
+, pythonAtLeast
 , numpy
+, wheel
 , werkzeug
 , protobuf
 , grpcio
 , markdown
-, futures
+, absl-py
+, google-auth-oauthlib
+, setuptools
+, tensorboard-data-server
+, tensorboard-plugin-wit
+, tensorboard-plugin-profile
 }:
 
 # tensorflow/tensorboard is built from a downloaded wheel, because
@@ -13,26 +23,67 @@
 
 buildPythonPackage rec {
   pname = "tensorflow-tensorboard";
-  version = "1.11.0";
+  version = "2.6.0";
   format = "wheel";
+  disabled = pythonOlder "3.6" || pythonAtLeast "3.10";
 
-  src = fetchPypi ({
+  src = fetchPypi {
     pname = "tensorboard";
-    inherit version;
-    format = "wheel";
-  } // (if isPy3k then {
+    inherit version format;
+    dist = "py3";
     python = "py3";
-    sha256 = "1nkd37zq9mk0gc9x6d4x8whahbx2cn0wl94lir3g1pibdzx9hc4v";
-  } else {
-    python = "py2";
-    sha256 = "1mkyb5gn952i4s7fmc9ay4yh74ysrqbiqna6dl1qmahjpbaavbf5";
-  }));
+    sha256 = "sha256-99rEzftS0UyeP3RYXOKq+OYgNiCoZOUfr4SYiwn3u9s=";
+  };
 
-  propagatedBuildInputs = [ numpy werkzeug protobuf markdown grpcio ] ++ lib.optional (!isPy3k) futures;
+  postPatch = ''
+    chmod u+rwx -R ./dist
+    pushd dist
+    wheel unpack --dest unpacked ./*.whl
+    pushd unpacked/tensorboard-${version}
 
-  meta = with stdenv.lib; {
+    substituteInPlace tensorboard-${version}.dist-info/METADATA \
+      --replace "google-auth (<2,>=1.6.3)" "google-auth (<3,>=1.6.3)"
+
+    popd
+    wheel pack ./unpacked/tensorboard-${version}
+    popd
+  '';
+
+  propagatedBuildInputs = [
+    absl-py
+    grpcio
+    google-auth-oauthlib
+    markdown
+    numpy
+    protobuf
+    setuptools
+    tensorboard-data-server
+    tensorboard-plugin-profile
+    tensorboard-plugin-wit
+    werkzeug
+    # not declared in install_requires, but used at runtime
+    # https://github.com/NixOS/nixpkgs/issues/73840
+    wheel
+  ];
+
+  # in the absence of a real test suite, run cli and imports
+  checkPhase = ''
+    $out/bin/tensorboard --help > /dev/null
+  '';
+
+  pythonImportsCheck = [
+    "tensorboard"
+    "tensorboard.backend"
+    "tensorboard.compat"
+    "tensorboard.data"
+    "tensorboard.plugins"
+    "tensorboard.summary"
+    "tensorboard.util"
+  ];
+
+  meta = with lib; {
     description = "TensorFlow's Visualization Toolkit";
-    homepage = http://tensorflow.org;
+    homepage = "https://www.tensorflow.org/";
     license = licenses.asl20;
     maintainers = with maintainers; [ abbradar ];
   };

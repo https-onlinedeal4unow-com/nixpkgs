@@ -42,7 +42,7 @@ let
         valueBuildBuild = pkgsBuildBuild.${name} or {};
         valueBuildHost = pkgsBuildHost.${name} or {};
         valueBuildTarget = pkgsBuildTarget.${name} or {};
-        valueHostHost = throw "`valueHostHost` unimplemented: pass manually rather than relying on splice.";
+        valueHostHost = pkgsHostHost.${name} or {};
         valueHostTarget = pkgsHostTarget.${name} or {};
         valueTargetTarget = pkgsTargetTarget.${name} or {};
         augmentedValue = defaultValue
@@ -53,7 +53,7 @@ let
             __spliced =
                  (lib.optionalAttrs (pkgsBuildBuild ? ${name}) { buildBuild = valueBuildBuild; })
               // (lib.optionalAttrs (pkgsBuildTarget ? ${name}) { buildTarget = valueBuildTarget; })
-              // { hostHost = valueHostHost; }
+              // (lib.optionalAttrs (pkgsHostHost ? ${name}) { hostHost = valueHostHost; })
               // (lib.optionalAttrs (pkgsTargetTarget ? ${name}) { targetTarget = valueTargetTarget;
           });
         };
@@ -81,7 +81,7 @@ let
           pkgsBuildBuild = valueBuildBuild;
           pkgsBuildHost = valueBuildHost;
           pkgsBuildTarget = valueBuildTarget;
-          pkgsHostHost = {};
+          pkgsHostHost = valueHostHost;
           pkgsHostTarget = valueHostTarget;
           pkgsTargetTarget = valueTargetTarget;
         # Don't be fancy about non-derivations. But we could have used used
@@ -96,19 +96,20 @@ let
                    } @ args:
     if actuallySplice then spliceReal args else pkgsHostTarget;
 
-  splicedPackages = splicePackages rec {
-    pkgsBuildBuild = pkgs.buildPackages.buildPackages;
-    pkgsBuildHost = pkgs.buildPackages;
-    pkgsBuildTarget =
-      if pkgs.stdenv.targetPlatform == pkgs.stdenv.hostPlatform
-      then pkgsBuildHost
-      else assert pkgs.stdenv.hostPlatform == pkgs.stdenv.buildPlatform; pkgsHostTarget;
-    pkgsHostHost = {}; # unimplemented
-    pkgsHostTarget = pkgs;
-    pkgsTargetTarget = pkgs.targetPackages;
+  splicedPackages = splicePackages {
+    inherit (pkgs)
+      pkgsBuildBuild pkgsBuildHost pkgsBuildTarget
+      pkgsHostHost pkgsHostTarget
+      pkgsTargetTarget
+      ;
   } // {
     # These should never be spliced under any circumstances
-    inherit (pkgs) pkgs buildPackages targetPackages;
+    inherit (pkgs)
+      pkgsBuildBuild pkgsBuildHost pkgsBuildTarget
+      pkgsHostHost pkgsHostTarget
+      pkgsTargetTarget
+      buildPackages pkgs targetPackages
+      ;
     inherit (pkgs.stdenv) buildPlatform targetPlatform hostPlatform;
   };
 

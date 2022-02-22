@@ -1,11 +1,11 @@
-{ stdenv, fetchzip }:
+{ lib, fetchzip }:
 
 let
-  version = "4.46.0";
-in fetchzip rec {
+  version = "4.49.1";
+in fetchzip {
   name = "terminus-font-ttf-${version}";
 
-  url = "http://files.ax86.net/terminus-ttf/files/${version}/terminus-ttf-${version}.zip";
+  url = "https://files.ax86.net/terminus-ttf/files/${version}/terminus-ttf-${version}.zip";
 
   postFetch = ''
     unzip -j $downloadedFile
@@ -18,17 +18,16 @@ in fetchzip rec {
     install -Dm 644 COPYING "$out/share/doc/terminus-font-ttf/COPYING"
   '';
 
-  sha256 = "129rfmwnm2bhp99w4zl262l6sdx8pddc0gf1ispjqs6dz3m3mdkp";
+  sha256 = "sha256-UaTnCamIRN/3xZsYt5nYzvykXQ3ri94a047sWOJ2RfU=";
 
-  meta = with stdenv.lib; {
+  meta = with lib; {
     description = "A clean fixed width TTF font";
     longDescription = ''
       Monospaced bitmap font designed for long work with computers
       (TTF version, mainly for Java applications)
     '';
-    homepage = http://files.ax86.net/terminus-ttf;
+    homepage = "https://files.ax86.net/terminus-ttf";
     license = licenses.ofl;
     maintainers = with maintainers; [ okasu ];
-    platforms = platforms.unix;
   };
 }

@@ -1,30 +1,30 @@
-{ stdenv, lib, fetchurl, cmake, extra-cmake-modules, threadweaver, ktexteditor, kdevelop-unwrapped, python }:
+{ stdenv, lib, fetchFromGitHub, cmake, extra-cmake-modules, threadweaver, ktexteditor, kdevelop-unwrapped, python }:
 
-let
-  pname = "kdev-python";
-  version = "5.3.1";
-in
 stdenv.mkDerivation rec {
-  name = "${pname}-${version}";
+  pname = "kdev-python";
+  version = "5.6.2";
 
-  src = fetchurl {
-    url = "https://github.com/KDE/${pname}/archive/v${version}.tar.gz";
-    sha256 = "11hf8n6vrlaz31c0p3xbnf0df2q5j6ykgc9ip0l5g33kadwn5b9j";
+  src = fetchFromGitHub {
+    owner = "KDE";
+    repo = "kdev-python";
+    rev = "v${version}";
+    sha256 = "sha256-xYElqpJjRtBRIyZGf6JaCvurQ+QrGrdLHxtuANYfCds=";
   };
 
   cmakeFlags = [
-    "-DBUILD_TESTING=OFF"
     "-DPYTHON_EXECUTABLE=${python}/bin/python"
   ];
 
   nativeBuildInputs = [ cmake extra-cmake-modules ];
   buildInputs = [ threadweaver ktexteditor kdevelop-unwrapped ];
 
+  dontWrapQtApps = true;
+
   meta = with lib; {
     maintainers = [ maintainers.aanderse ];
     platforms = platforms.linux;
     description = "Python support for KDevelop";
-    homepage = https://www.kdevelop.org;
+    homepage = "https://www.kdevelop.org";
     license = [ licenses.gpl2 ];
   };
 }

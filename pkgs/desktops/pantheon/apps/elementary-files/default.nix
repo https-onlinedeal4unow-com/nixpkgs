@@ -1,36 +1,54 @@
-{ stdenv, fetchFromGitHub, pantheon, pkgconfig, meson, ninja, gettext, vala
-, python3, desktop-file-utils, libcanberra, gtk3, libgee, granite, libnotify
-, libunity, pango, plank, bamf, sqlite, libdbusmenu-gtk3, zeitgeist, glib-networking
-, elementary-icon-theme, gobject-introspection, wrapGAppsHook }:
+{ lib
+, stdenv
+, fetchFromGitHub
+, nix-update-script
+, pkg-config
+, meson
+, ninja
+, gettext
+, vala
+, python3
+, desktop-file-utils
+, libcanberra
+, gtk3
+, glib
+, libgee
+, libhandy
+, granite
+, libnotify
+, pango
+, elementary-dock
+, bamf
+, sqlite
+, zeitgeist
+, glib-networking
+, elementary-icon-theme
+, libcloudproviders
+, libgit2-glib
+, wrapGAppsHook
+, systemd
+}:
 
 stdenv.mkDerivation rec {
-  pname = "files";
-  version = "4.1.5";
+  pname = "elementary-files";
+  version = "6.1.2";
 
-  name = "elementary-${pname}-${version}";
+  outputs = [ "out" "dev" ];
 
   src = fetchFromGitHub {
     owner = "elementary";
-    repo = pname;
+    repo = "files";
     rev = version;
-    sha256 = "0z0pisg7py2k6i31v18z5fgpj8x64m1s5clfq4vbbjrcjwx6dcx5";
-  };
-
-  passthru = {
-    updateScript = pantheon.updateScript {
-      repoName = pname;
-      attrPath = "elementary-${pname}";
-    };
+    sha256 = "sha256-g9g4wJXjjudk4Qt96XGUiV/X86Ae2lqhM+psh9h+XFE=";
   };
 
   nativeBuildInputs = [
     desktop-file-utils
     gettext
     glib-networking
-    gobject-introspection
     meson
     ninja
-    pkgconfig
+    pkg-config
     python3
     vala
     wrapGAppsHook
@@ -38,39 +56,40 @@ stdenv.mkDerivation rec {
 
   buildInputs = [
     bamf
+    elementary-dock
     elementary-icon-theme
+    glib
     granite
     gtk3
     libcanberra
-    libdbusmenu-gtk3
+    libcloudproviders
     libgee
+    libgit2-glib
+    libhandy
     libnotify
-    libunity
     pango
-    plank
     sqlite
+    systemd
     zeitgeist
   ];
-
-  patches = [ ./hardcode-gsettings.patch ];
 
   postPatch = ''
     chmod +x meson/post_install.py
     patchShebangs meson/post_install.py
-
-    substituteInPlace filechooser-module/FileChooserDialog.vala --subst-var-by ELEMENTARY_FILES_GSETTINGS_PATH $out/share/gsettings-schemas/${name}/glib-2.0/schemas
   '';
 
-  # xdg.mime will create this
-  postInstall = ''
-    rm $out/share/applications/mimeinfo.cache
-  '';
+  passthru = {
+    updateScript = nix-update-script {
+      attrPath = "pantheon.${pname}";
+    };
+  };
 
-  meta = with stdenv.lib; {
+  meta = with lib; {
     description = "File browser designed for elementary OS";
-    homepage = https://github.com/elementary/files;
-    license = licenses.lgpl3;
+    homepage = "https://github.com/elementary/files";
+    license = licenses.gpl3Plus;
     platforms = platforms.linux;
-    maintainers = pantheon.maintainers;
+    maintainers = teams.pantheon.members;
+    mainProgram = "io.elementary.files";
   };
 }

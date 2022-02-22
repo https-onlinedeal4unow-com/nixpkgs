@@ -1,23 +1,30 @@
-{ stdenv, fetchurl }:
+{ lib, stdenv, fetchurl, gnome, libxslt }:
 
-let
-  version = "20190116";
-  pname = "mobile-broadband-provider-info";
-  name = "${pname}-${version}";
-in
 stdenv.mkDerivation rec {
-  inherit name;
+  pname = "mobile-broadband-provider-info";
+  version = "20210805";
 
   src = fetchurl {
-    url = "mirror://gnome/sources/${pname}/${version}/${name}.tar.xz";
-    sha256 = "16y5lc7pfdvai9c8xwb825zc3v46039gghbip13fqslf5gw11fic";
+    url = "mirror://gnome/sources/${pname}/${version}/${pname}-${version}.tar.xz";
+    sha256 = "sha256-a/ihVY6lVBr7xve0QV50zJ9aqYKbE07Ks+8ch0ElaLw=";
   };
 
-  meta = {
+  nativeBuildInputs = [
+    # fixes configure: error: xsltproc not found
+    libxslt
+  ];
+
+  passthru = {
+    updateScript = gnome.updateScript {
+      packageName = pname;
+    };
+  };
+
+  meta = with lib; {
     description = "Mobile broadband service provider database";
-    homepage = http://live.gnome.org/NetworkManager/MobileBroadband/ServiceProviders;
-    platforms = stdenv.lib.platforms.all;
-    license = stdenv.lib.licenses.publicDomain;
+    homepage = "https://wiki.gnome.org/Projects/NetworkManager/MobileBroadband/ServiceProviders";
+    license = licenses.publicDomain;
     maintainers = [ ];
+    platforms = platforms.all;
   };
 }

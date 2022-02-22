@@ -1,31 +1,55 @@
-{ lib, stdenv, fetchPypi, buildPythonPackage, isPy27, pythonOlder
-, numpy, nose, enum34, futures, pathlib }:
+{ lib
+, buildPythonPackage
+, dask
+, fetchPypi
+, fsspec
+, lxml
+, numpy
+, pytestCheckHook
+, pythonOlder
+, zarr
+}:
 
 buildPythonPackage rec {
   pname = "tifffile";
-  # 2018.10.18 and 2018.11.6 are not releases...?
-  # https://github.com/blink1073/tifffile/issues/54
-  # anaconda uses 0.15.1
-  version = "2019.2.10";
+  version = "2021.11.2";
+  format = "setuptools";
+
+  disabled = pythonOlder "3.7";
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "ead5f84c0b100f8100377b8ef2bcffaf21c249784ddc240346b715408b45f42c";
+    hash = "sha256-FT4x+h2JL0gvq7KunyVh+kKe5C0BpvZ+WM7hNjfZKFs=";
   };
 
-  checkInputs = [ nose ];
-  checkPhase = ''
-    nosetests --exe -v --exclude="test_extension"
-  '';
+  propagatedBuildInputs = [
+    numpy
+  ];
 
-  propagatedBuildInputs = [ numpy ]
-    ++ lib.optional isPy27 [ futures pathlib ]
-    ++ lib.optional (pythonOlder "3.0") enum34;
+  checkInputs = [
+    dask
+    fsspec
+    lxml
+    pytestCheckHook
+    zarr
+  ];
 
-  meta = with stdenv.lib; {
-    description = "Read and write image data from and to TIFF files.";
-    homepage = https://github.com/blink1073/tifffile;
-    maintainers = [ maintainers.lebastr ];
-    license = licenses.bsd2;
+  disabledTests = [
+    # Test require network access
+    "test_class_omexml"
+    "test_write_ome"
+    # Test file is missing
+    "test_write_predictor"
+  ];
+
+  pythonImportsCheck = [
+    "tifffile"
+  ];
+
+  meta = with lib; {
+    description = "Read and write image data from and to TIFF files";
+    homepage = "https://github.com/cgohlke/tifffile/";
+    license = licenses.bsd3;
+    maintainers = with maintainers; [ lebastr ];
   };
 }

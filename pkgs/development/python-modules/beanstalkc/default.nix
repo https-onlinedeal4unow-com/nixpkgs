@@ -1,18 +1,22 @@
-{ stdenv, fetchPypi, buildPythonPackage }:
+{ lib, fetchFromGitHub, buildPythonPackage }:
 
 buildPythonPackage rec {
   pname = "beanstalkc";
-  version = "0.4.0";
+  version = "0.5.2";
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "98978e57797320146f4b233286d9a02f65d20bad0168424118839fc608085280";
+  src = fetchFromGitHub {
+    owner = "bosondata";
+    repo = "beanstalkc";
+    rev = "v${version}";
+    sha256 = "1dpb1yimp2pfnikmgsb2fr9x6h8riixlsx3xfqphnfvrid49vw5s";
   };
 
-  meta = {
+  doCheck = false;
+
+  meta = with lib; {
     description = "A simple beanstalkd client library for Python";
-    maintainers = with stdenv.lib.maintainers; [ aanderse ];
-    license = with stdenv.lib.licenses; [ asl20 ];
-    homepage = https://github.com/earl/beanstalkc;
+    maintainers = with maintainers; [ aanderse ];
+    license = licenses.asl20;
+    homepage = "https://github.com/earl/beanstalkc";
   };
 }

@@ -1,20 +1,20 @@
-{ stdenv, buildPythonPackage, fetchPypi
+{ lib, buildPythonPackage, fetchPypi
 , setuptools }:
 
 buildPythonPackage rec {
-  version = "2.0.1";
+  version = "2.2.0";
   pname = "pyshp";
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "049xj760s75nkvs7rhz710a6x3lvvfajddknmfz1vkf2p3f2l2as";
+    sha256 = "sha256-Dtogm9YvM0VwHE9nmbY4wRTOtn/uKClc3bThyvBT6UQ=";
   };
 
   buildInputs = [ setuptools ];
 
-  meta = with stdenv.lib; {
+  meta = with lib; {
     description = "Pure Python read/write support for ESRI Shapefile format";
-    homepage = https://github.com/GeospatialPython/pyshp;
+    homepage = "https://github.com/GeospatialPython/pyshp";
     license = licenses.mit;
   };
 }

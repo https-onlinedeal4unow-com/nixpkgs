@@ -1,28 +1,35 @@
-{ stdenv, fetchFromGitHub, autoreconfHook, pkgconfig, boost, icu, catch2 }:
+{ lib, stdenv, fetchFromGitHub, cmake, pkg-config, icu, catch2, pandoc }:
 
 stdenv.mkDerivation rec {
-  name = "nuspell-${version}";
-  version = "2.1.0";
+  pname = "nuspell";
+  version = "5.0.1";
 
   src = fetchFromGitHub {
     owner = "nuspell";
     repo = "nuspell";
     rev = "v${version}";
-    sha256 = "0gcw3p1agnx474r7kv27y9jyab20p4j4xx7j9a2yssg54qabm71j";
+    sha256 = "sha256-ogA7ycqdMUTN/KHV2oZzytnhZ7XVuhx+ArXZqLlmwjk=";
   };
 
-  nativeBuildInputs = [ autoreconfHook pkgconfig ];
-  buildInputs = [ boost icu ];
+  nativeBuildInputs = [ cmake pkg-config pandoc ];
+  buildInputs = [ icu ];
 
-  enableParallelBuilding = true;
+  outputs = [ "out" "lib" "dev" "man" ];
 
-  preBuild = ''
-    ln -s ${catch2}/include/catch2/*.hpp tests/
+  postPatch = ''
+    rm -rf external/Catch2
+    ln -sf ${catch2.src} external/Catch2
   '';
 
-  meta = with stdenv.lib; {
+  postInstall = ''
+    rm -rf $out/share/doc
+  '';
+
+  meta = with lib; {
     description = "Free and open source C++ spell checking library";
     homepage = "https://nuspell.github.io/";
+    platforms = platforms.all;
     maintainers = with maintainers; [ fpletz ];
+    license = licenses.lgpl3Plus;
   };
 }

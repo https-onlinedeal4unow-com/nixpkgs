@@ -1,29 +1,32 @@
-{ stdenv, fetchurl, cmake, openblasCompat, gfortran, gmm, fltk, libjpeg
-, zlib, libGLU_combined, libGLU, xorg }:
+{ lib, stdenv, fetchurl, cmake, blas, lapack, gfortran, gmm, fltk, libjpeg
+, zlib, libGL, libGLU, xorg, opencascade-occt }:
 
-let version = "4.1.3"; in
+assert (!blas.isILP64) && (!lapack.isILP64);
 
-stdenv.mkDerivation {
-  name = "gmsh-${version}";
+stdenv.mkDerivation rec {
+  pname = "gmsh";
+  version = "4.9.4";
 
   src = fetchurl {
-    url = "http://gmsh.info/src/gmsh-${version}-source.tgz";
-    sha256 = "0padylvicyhcm4vqkizpknjfw8qxh39scw3mj5xbs9bs8c442kmx";
+    url = "https://gmsh.info/src/gmsh-${version}-source.tgz";
+    sha256 = "sha256-rP8zQtGQfEKaS+PkWW7UT2zUP9WpSrdWZ/SGPNzy92k=";
   };
 
-  buildInputs = [ cmake openblasCompat gmm fltk libjpeg zlib libGLU_combined
-    libGLU xorg.libXrender xorg.libXcursor xorg.libXfixes xorg.libXext
-    xorg.libXft xorg.libXinerama xorg.libX11 xorg.libSM xorg.libICE
+  buildInputs = [
+    blas lapack gmm fltk libjpeg zlib opencascade-occt
+  ] ++ lib.optionals (!stdenv.isDarwin) [
+    libGL libGLU xorg.libXrender xorg.libXcursor xorg.libXfixes
+    xorg.libXext xorg.libXft xorg.libXinerama xorg.libX11 xorg.libSM
+    xorg.libICE
   ];
 
-  nativeBuildInputs = [ gfortran ];
+  nativeBuildInputs = [ cmake gfortran ];
 
-  enableParallelBuilding = true;
+  doCheck = true;
 
   meta = {
     description = "A three-dimensional finite element mesh generator";
-    homepage = http://gmsh.info/;
-    platforms = [ "x86_64-linux" ];
-    license = stdenv.lib.licenses.gpl2Plus;
+    homepage = "https://gmsh.info/";
+    license = lib.licenses.gpl2Plus;
   };
 }

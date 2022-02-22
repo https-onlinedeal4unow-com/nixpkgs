@@ -1,11 +1,15 @@
-{ stdenv, fetchurl, pkgconfig
+{ lib, stdenv, fetchurl, pkg-config, fetchFromGitLab
 , python3
 , perl
 , perlPackages
 , gtk3
 , intltool
+, libpeas
 , libsoup
-, gnome3
+, libsecret
+, libnotify
+, libdmapsharing
+, gnome
 , totem-pl-parser
 , tdb
 , json-glib
@@ -15,27 +19,36 @@
 , gst_plugins ? with gst_all_1; [ gst-plugins-good gst-plugins-ugly ]
 }:
 let
-  pname = "rhythmbox";
-  version = "3.4.2";
+
+  # The API version of libdmapsharing required by rhythmbox 3.4.4 is 3.0.
+
+  # This PR would solve the issue:
+  # https://gitlab.gnome.org/GNOME/rhythmbox/-/merge_requests/12
+  # Unfortunately applying this patch produces a rhythmbox which
+  # cannot fetch data from DAAP shares.
+
+  libdmapsharing_3 = libdmapsharing.overrideAttrs (old: rec {
+    version = "2.9.41";
+    src = fetchFromGitLab {
+      domain = "gitlab.gnome.org";
+      owner = "GNOME";
+      repo = old.pname;
+      rev = "${lib.toUpper old.pname}_${lib.replaceStrings ["."] ["_"] version}";
+      sha256 = "05kvrzf0cp3mskdy6iv7zqq24qdczl800q2dn1h4bk3d9wchgm4p";
+    };
+  });
+
 in stdenv.mkDerivation rec {
-  name = "${pname}-${version}";
+  pname = "rhythmbox";
+  version = "3.4.4";
 
   src = fetchurl {
-    url = "mirror://gnome/sources/${pname}/${stdenv.lib.versions.majorMinor version}/${name}.tar.xz";
-    sha256 = "0hzcns8gf5yb0rm4ss8jd8qzarcaplp5cylk6plwilsqfvxj4xn2";
+    url = "mirror://gnome/sources/${pname}/${lib.versions.majorMinor version}/${pname}-${version}.tar.xz";
+    sha256 = "142xcvw4l19jyr5i72nbnrihs953pvrrzcbijjn9dxmxszbv03pf";
   };
 
-  patches = [
-    # build with GStreamer 1.14 https://bugzilla.gnome.org/show_bug.cgi?id=788706
-    (fetchurl {
-      name = "fmradio-Fix-build-with-GStreamer-master.patch";
-      url = https://bugzilla.gnome.org/attachment.cgi?id=361178;
-      sha256 = "1h09mimlglj9hcmc3pfp0d6c277mqh2khwv9fryk43pkv3904d2w";
-    })
-  ];
-
   nativeBuildInputs = [
-    pkgconfig
+    pkg-config
     intltool perl perlPackages.XMLParser
     itstool
     wrapGAppsHook
@@ -48,27 +61,41 @@ in stdenv.mkDerivation rec {
     json-glib
 
     gtk3
-    gnome3.libpeas
+    libpeas
     totem-pl-parser
-    gnome3.adwaita-icon-theme
+    gnome.adwaita-icon-theme
 
     gst_all_1.gstreamer
     gst_all_1.gst-plugins-base
+    gst_all_1.gst-plugins-good
+    gst_all_1.gst-plugins-bad
+    gst_all_1.gst-plugins-ugly
+    gst_all_1.gst-libav
+
+    libdmapsharing_3 # necessary for daap support
+    libsecret
+    libnotify
   ] ++ gst_plugins;
+
+  configureFlags = [
+    "--enable-daap"
+    "--enable-libnotify"
+    "--with-libsecret"
+  ];
 
   enableParallelBuilding = true;
 
   passthru = {
-    updateScript = gnome3.updateScript {
+    updateScript = gnome.updateScript {
       packageName = pname;
       versionPolicy = "none";
     };
   };
 
-  meta = with stdenv.lib; {
-    homepage = https://wiki.gnome.org/Apps/Rhythmbox;
+  meta = with lib; {
+    homepage = "https://wiki.gnome.org/Apps/Rhythmbox";
     description = "A music playing application for GNOME";
-    license = licenses.gpl2;
+    license = licenses.gpl2Plus;
     platforms = platforms.linux;
     maintainers = [ maintainers.rasendubi ];
   };

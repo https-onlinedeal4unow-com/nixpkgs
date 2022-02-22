@@ -1,15 +1,24 @@
-{ stdenv, fetchFromGitHub, cmake, lxqt-build-tools, qtermwidget,
-  qtbase, qttools, qtx11extras }:
+{ lib
+, mkDerivation
+, fetchFromGitHub
+, cmake
+, lxqt-build-tools
+, qtermwidget
+, qtbase
+, qttools
+, qtx11extras
+, lxqtUpdateScript
+}:
 
-stdenv.mkDerivation rec {
+mkDerivation rec {
   pname = "qterminal";
-  version = "0.14.0";
+  version = "1.0.0";
 
   src = fetchFromGitHub {
     owner = "lxqt";
     repo = pname;
     rev = version;
-    sha256 = "071qz248j9gcqzchnrz8xamm07g4r2xyrmnb0a2vjkjd63pk2r8f";
+    sha256 = "12p3fnbkpj6z0iplg75304l8kvnn145iq6bpw30n9bwflxrd6yhd";
   };
 
   nativeBuildInputs = [
@@ -24,11 +33,13 @@ stdenv.mkDerivation rec {
     qtermwidget
   ];
 
-  meta = with stdenv.lib; {
+  passthru.updateScript = lxqtUpdateScript { inherit pname version src; };
+
+  meta = with lib; {
+    homepage = "https://github.com/lxqt/qterminal";
     description = "A lightweight Qt-based terminal emulator";
-    homepage = https://github.com/lxqt/qterminal;
-    license = licenses.gpl2;
+    license = licenses.gpl2Plus;
     platforms = with platforms; unix;
-    maintainers = with maintainers; [ romildo ];
+    maintainers = with maintainers; [ romildo globin ];
   };
 }

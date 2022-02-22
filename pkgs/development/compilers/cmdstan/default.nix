@@ -1,18 +1,19 @@
-{ stdenv, fetchurl, python }:
+{ lib, stdenv, fetchurl, python3, runtimeShell }:
 
 stdenv.mkDerivation rec {
-  name = "cmdstan-2.17.1";
+  pname = "cmdstan";
+  version = "2.17.1";
 
   src = fetchurl {
-    url = "https://github.com/stan-dev/cmdstan/releases/download/v2.17.1/cmdstan-2.17.1.tar.gz";
+    url = "https://github.com/stan-dev/cmdstan/releases/download/v${version}/cmdstan-${version}.tar.gz";
     sha256 = "1vq1cnrkvrvbfl40j6ajc60jdrjcxag1fi6kff5pqmadfdz9564j";
   };
 
-  buildFlags = "build";
+  buildFlags = [ "build" ];
   enableParallelBuilding = true;
 
   doCheck = true;
-  checkInputs = [ python ];
+  checkInputs = [ python3 ];
   checkPhase = "python ./runCmdStanTests.py src/test/interface"; # see #5368
 
   installPhase = ''
@@ -21,7 +22,7 @@ stdenv.mkDerivation rec {
     ln -s $out/opt/cmdstan/bin/stanc $out/bin/stanc
     ln -s $out/opt/cmdstan/bin/stansummary $out/bin/stansummary
     cat > $out/bin/stan <<EOF
-    #!${stdenv.shell}
+    #!${runtimeShell}
     make -C $out/opt/cmdstan "\$(realpath "\$1")"
     EOF
     chmod a+x $out/bin/stan
@@ -35,8 +36,8 @@ stdenv.mkDerivation rec {
       inference with Variational inference (ADVI) and penalized maximum
       likelihood estimation with Optimization (L-BFGS).
     '';
-    homepage = http://mc-stan.org/interfaces/cmdstan.html;
-    license = stdenv.lib.licenses.bsd3;
-    platforms = stdenv.lib.platforms.all;
+    homepage = "https://mc-stan.org/interfaces/cmdstan.html";
+    license = lib.licenses.bsd3;
+    platforms = lib.platforms.all;
   };
 }

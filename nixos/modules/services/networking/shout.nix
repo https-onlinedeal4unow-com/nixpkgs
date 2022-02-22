@@ -6,7 +6,7 @@ let
   cfg = config.services.shout;
   shoutHome = "/var/lib/shout";
 
-  defaultConfig = pkgs.runCommand "config.js" {} ''
+  defaultConfig = pkgs.runCommand "config.js" { preferLocalBuild = true; } ''
     EDITOR=true ${pkgs.shout}/bin/shout config --home $PWD
     mv config.js $out
   '';
@@ -35,13 +35,13 @@ in {
     };
 
     listenAddress = mkOption {
-      type = types.string;
+      type = types.str;
       default = "0.0.0.0";
       description = "IP interface to listen on for http connections.";
     };
 
     port = mkOption {
-      type = types.int;
+      type = types.port;
       default = 9000;
       description = "TCP port to listen on for http connections.";
     };
@@ -82,13 +82,14 @@ in {
   };
 
   config = mkIf cfg.enable {
-    users.users = singleton {
-      name = "shout";
-      uid = config.ids.uids.shout;
+    users.users.shout = {
+      isSystemUser = true;
+      group = "shout";
       description = "Shout daemon user";
       home = shoutHome;
       createHome = true;
     };
+    users.groups.shout = {};
 
     systemd.services.shout = {
       description = "Shout web IRC client";

@@ -1,4 +1,4 @@
-{ stdenv, fetchFromGitHub, fetchurl, pythonPackages, curl }:
+{ lib, fetchFromGitHub, fetchurl, python2Packages, curl }:
 
 let
   getmodel = name: sha256: {
@@ -17,23 +17,23 @@ let
   ];
 
 in
-pythonPackages.buildPythonApplication rec {
-  name = "ocropus-${version}";
-  version = "20170811";
+python2Packages.buildPythonApplication rec {
+  pname = "ocropus";
+  version = "1.3.3";
 
   src = fetchFromGitHub {
-    sha256 = "0qx0d8yj0w66qglkrmfavp5dh1sky72njfaqii7bnrpv5n4j3q39";
-    rev = "ae84a8edaf0b76135f749ba66fc30c272d0726d0";
+    sha256 = "02p1334mic5cfhvpfphfrbim4036yfd8s2zzpwm0xmm829z71nr7";
+    rev = "v${version}";
     repo = "ocropy";
     owner = "tmbdev";
   };
 
-  propagatedBuildInputs = with pythonPackages; [ curl numpy scipy pillow
+  propagatedBuildInputs = with python2Packages; [ curl numpy scipy pillow
     matplotlib beautifulsoup4 pygtk lxml ];
 
   enableParallelBuilding = true;
 
-  preConfigure = with stdenv.lib; ''
+  preConfigure = with lib; ''
     ${concatStrings (map (x: "cp -R ${x.src} models/`basename ${x.name}`;")
       models)}
 
@@ -49,10 +49,10 @@ pythonPackages.buildPythonApplication rec {
     PATH=".:$PATH" ./run-test
   '';
 
-  meta = with stdenv.lib; {
+  meta = with lib; {
     description = "Open source document analysis and OCR system";
     license = licenses.asl20;
-    homepage = https://github.com/tmbdev/ocropy/;
+    homepage = "https://github.com/tmbdev/ocropy/";
     maintainers = with maintainers; [ domenkozar ];
     platforms = platforms.linux;
   };

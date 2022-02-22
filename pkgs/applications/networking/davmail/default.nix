@@ -1,10 +1,11 @@
-{ fetchurl, stdenv, jre, glib, libXtst, gtk2, makeWrapper, unzip }:
+{ fetchurl, lib, stdenv, jre, glib, libXtst, gtk2, makeWrapper, unzip }:
 
 stdenv.mkDerivation rec {
-  name = "davmail-4.8.6";
+  pname = "davmail";
+  version = "5.5.1";
   src = fetchurl {
-    url = "mirror://sourceforge/davmail/4.8.6/davmail-4.8.6-2600.zip";
-    sha256 = "1wk4jxb46qlyipxj57flqadgm4mih243rhqq9sp9m5pifjqrw9dp";
+    url = "mirror://sourceforge/${pname}/${version}/${pname}-${version}-3299.zip";
+    sha256 = "sha256-NN/TUOcUIifNzrJnZmtYhs6UVktjlfoOYJjYaMEQpI4=";
   };
 
   sourceRoot = ".";
@@ -12,18 +13,20 @@ stdenv.mkDerivation rec {
   nativeBuildInputs = [ makeWrapper unzip ];
 
   installPhase = ''
+    runHook preInstall
     mkdir -p $out/share/davmail
     cp -vR ./* $out/share/davmail
-    makeWrapper $out/share/davmail/davmail.sh $out/bin/davmail \
+    makeWrapper $out/share/davmail/davmail $out/bin/davmail \
       --prefix PATH : ${jre}/bin \
-      --prefix LD_LIBRARY_PATH : ${stdenv.lib.makeLibraryPath [ glib gtk2 libXtst ]}
+      --prefix LD_LIBRARY_PATH : ${lib.makeLibraryPath [ glib gtk2 libXtst ]}
+    runHook postInstall
   '';
 
-  meta = with stdenv.lib; {
-    homepage = http://davmail.sourceforge.net/;
+  meta = with lib; {
+    homepage = "http://davmail.sourceforge.net/";
     description = "A Java application which presents a Microsoft Exchange server as local CALDAV, IMAP and SMTP servers";
     maintainers = [ maintainers.hinton ];
     platforms = platforms.all;
-    license = licenses.gpl2;
+    license = licenses.gpl2Plus;
   };
 }

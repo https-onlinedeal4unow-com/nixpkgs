@@ -1,30 +1,61 @@
-{ lib, stdenv, fetchurl, pkgconfig, libftdi, pciutils }:
+{ fetchurl
+, fetchpatch
+, stdenv
+, installShellFiles
+, lib
+, libftdi1
+, libjaylink
+, libusb1
+, pciutils
+, pkg-config
+, jlinkSupport ? false
+}:
 
-let version = "1.0"; in
 stdenv.mkDerivation rec {
-  name = "flashrom-${version}";
+  pname = "flashrom";
+  version = "1.2";
 
   src = fetchurl {
-    url = "https://download.flashrom.org/releases/${name}.tar.bz2";
-    sha256 = "0i9wg1lyfg99bld7d00zqjm9f0lk6m0q3h3n9c195c9yysq5ccfb";
+    url = "https://download.flashrom.org/releases/flashrom-v${version}.tar.bz2";
+    sha256 = "0ax4kqnh7kd3z120ypgp73qy1knz47l6qxsqzrfkd97mh5cdky71";
   };
 
-  # Newer versions of libusb deprecate some API flashrom uses.
+  nativeBuildInputs = [ pkg-config installShellFiles ];
+  buildInputs = [ libftdi1 libusb1 pciutils ]
+    ++ lib.optional jlinkSupport libjaylink;
+
+  patches = [
+    # remove when updating from 1.2
+    (fetchpatch {
+      name = "fix-aarch64-build.patch";
+      url = "https://github.com/flashrom/flashrom/commit/da6b3b70cb852dd8e9f9e21aef95fa83e7f7ab0d.patch";
+      sha256 = "sha256-fXYDXgT/ik+qtxxFEyJ7/axtycbwLkEg0UD+hzsYEwg=";
+    })
+    # fix build with gcc 10
+    (fetchpatch {
+      url = "https://github.com/flashrom/flashrom/commit/3a0c1966e4c66f91e6e8551e906b6db38002acb4.patch";
+      sha256 = "sha256-UfXLefMS20VUc7hk4IXECFbDWEbBnHMGSzOYemTfvjI=";
+    })
+  ];
+
   postPatch = ''
-    substituteInPlace Makefile \
-      --replace "-Werror" "-Werror -Wno-error=deprecated-declarations -Wno-error=unused-const-variable="
+    substituteInPlace util/z60_flashrom.rules \
+      --replace "plugdev" "flashrom"
   '';
 
-  nativeBuildInputs = [ pkgconfig ];
-  buildInputs = [ libftdi pciutils ];
+  makeFlags = [ "PREFIX=$(out)" "libinstall" ]
+    ++ lib.optional jlinkSupport "CONFIG_JLINK_SPI=yes";
 
-  preConfigure = "export PREFIX=$out";
+  postInstall = ''
+    install -Dm644 util/z60_flashrom.rules $out/lib/udev/rules.d/flashrom.rules
+  '';
 
   meta = with lib; {
-    homepage = http://www.flashrom.org;
+    homepage = "https://www.flashrom.org";
     description = "Utility for reading, writing, erasing and verifying flash ROM chips";
     license = licenses.gpl2;
-    maintainers = with maintainers; [ funfunctor fpletz ];
-    platforms = with platforms; linux;
+    maintainers = with maintainers; [ funfunctor fpletz felixsinger ];
+    platforms = platforms.all;
+    broken = stdenv.isDarwin; # requires DirectHW
   };
 }

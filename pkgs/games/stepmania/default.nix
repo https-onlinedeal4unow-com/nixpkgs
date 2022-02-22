@@ -1,23 +1,27 @@
 { stdenv, lib, fetchFromGitHub, cmake, nasm
-, gtk2, glib, ffmpeg, alsaLib, libmad, libogg, libvorbis
+, gtk2, glib, ffmpeg, alsa-lib, libmad, libogg, libvorbis
 , glew, libpulseaudio, udev
 }:
 
 stdenv.mkDerivation rec {
-  name = "stepmania-${version}";
-  version = "5.0.12";
+  pname = "stepmania";
+  version = "5.1.0-b2";
 
   src = fetchFromGitHub {
     owner = "stepmania";
     repo  = "stepmania";
     rev   = "v${version}";
-    sha256 = "0ig5pnw78j45b35kfr76phaqbac9b2f6wg3c63l6mf0nrq17wslz";
+    sha256 = "0a7y9l7xm510vgnpmj1is7p9m6d6yd0fcaxrjcickz295k5w3rdn";
   };
+
+  patches = [
+    ./0001-fix-build-with-ffmpeg-4.patch
+  ];
 
   nativeBuildInputs = [ cmake nasm ];
 
   buildInputs = [
-    gtk2 glib ffmpeg alsaLib libmad libogg libvorbis
+    gtk2 glib ffmpeg alsa-lib libmad libogg libvorbis
     glew libpulseaudio udev
   ];
 
@@ -29,13 +33,11 @@ stdenv.mkDerivation rec {
 
   postInstall = ''
     mkdir -p $out/bin
-    ln -s $out/stepmania-5.0/stepmania $out/bin/stepmania
+    ln -s $out/stepmania-5.1/stepmania $out/bin/stepmania
   '';
 
-  enableParallelBuilding = true;
-
   meta = with lib; {
-    homepage = http://www.stepmania.com/;
+    homepage = "https://www.stepmania.com/";
     description = "Free dance and rhythm game for Windows, Mac, and Linux";
     platforms = platforms.linux;
     license = licenses.mit; # expat version

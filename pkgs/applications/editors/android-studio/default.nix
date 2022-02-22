@@ -1,4 +1,4 @@
-{ stdenv, callPackage, makeFontsConf, gnome2 }:
+{ callPackage, makeFontsConf, gnome2, buildFHSUserEnv }:
 
 let
   mkStudio = opts: callPackage (import ./common.nix opts) {
@@ -6,33 +6,21 @@ let
       fontDirectories = [];
     };
     inherit (gnome2) GConf gnome_vfs;
+    inherit buildFHSUserEnv;
   };
   stableVersion = {
-    version = "3.3.1.0"; # "Android Studio 3.3.1"
-    build = "182.5264788";
-    sha256Hash = "0fghqkc8pkb7waxclm0qq4nlnsvmv9d3fcj5nnvgbfkjyw032q42";
+    version = "2021.1.1.21"; # "Android Studio Bumblebee (2021.1.1 Patch 1)"
+    sha256Hash = "PeMJIILfaunTlpR4EV76qQlTlZDcWoKes61qe9W9oqQ=";
   };
   betaVersion = {
-    version = "3.4.0.13"; # "Android Studio 3.4 Beta 4"
-    build = "183.5304277";
-    sha256Hash = "01x7xba0f5js213wgw0h1vw297vwz5q7dprnilcdydfjxwqsbr8f";
+    version = "2021.2.1.8"; # "Android Studio Chipmunk (2021.2.1) Beta 1"
+    sha256Hash = "bPfs4kw7czG9CbEgrzn0bQXdT03jyqPVqtaIuVBFSmc=";
   };
   latestVersion = { # canary & dev
-    version = "3.5.0.3"; # "Android Studio 3.5 Canary 4"
-    build = "183.5290690";
-    sha256Hash = "0d1cl78b25pksaj0scv3hxb14bjxk3591zbc0v7dykk1gf4pvxd1";
+    version = "2021.3.1.1"; # "Android Studio Dolphin (2021.3.1) Canary 1"
+    sha256Hash = "W3pNQBM7WdDScQo5b8q5Va5NTgl73uZu0ks/zDMb4aA=";
   };
-in rec {
-  # Old alias (TODO @primeos: Remove after 19.03 is branched off):
-  preview = throw ''
-    The attributes "android-studio-preview" and "androidStudioPackages.preview"
-    are now deprecated and will be removed soon, please use
-    "androidStudioPackages.beta" instead. This attribute corresponds to the
-    beta channel, if you want the latest release you can use
-    "androidStudioPackages.dev" or "androidStudioPackages.canary" instead
-    (currently, there is no difference between both channels).
-  '';
-
+in {
   # Attributes are named by their corresponding release channels
 
   stable = mkStudio (stableVersion // {

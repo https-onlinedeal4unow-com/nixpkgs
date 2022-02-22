@@ -1,50 +1,85 @@
-{ lib, fetchpatch, python3 }:
+{ lib, python3, mautrix-telegram, fetchFromGitHub
+, withE2BE ? true
+}:
 
-with python3.pkgs;
-
-buildPythonPackage rec {
-  pname = "mautrix-telegram";
-  version = "0.4.0.post1";
-
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "7a51e55a7f362013ce1cce7d850c65dc8d4651dd05c63004429bc521b461d029";
+let
+  python = python3.override {
+    packageOverrides = self: super: {
+      tulir-telethon = self.telethon.overridePythonAttrs (oldAttrs: rec {
+        version = "1.25.0a3";
+        pname = "tulir-telethon";
+        src = oldAttrs.src.override {
+          inherit pname version;
+          sha256 = "sha256-/kau9Q2+7giVx52tmjvYIbcDcY1/om31X9BlRvZipuk=";
+        };
+      });
+    };
   };
 
-  patches = [
-    (fetchpatch {
-      url = "https://github.com/tulir/mautrix-telegram/commit/a258c59ca3558ad91b1fee190c624763ca835d2f.patch";
-      sha256 = "04z4plsmqmg38rsw9irp5xc9wdgjvg6xba69mixi5v82h9lg3zzp";
-    })
-
-    ./fix_patch_conflicts.patch
-
-    (fetchpatch {
-      url = "https://github.com/tulir/mautrix-telegram/commit/8021fcc24cbf8c88d9bcb2601333863c9615bd4f.patch";
-      sha256 = "0cdfv8ggnjdwdhls1lk6498b233lvnb6175xbxr206km5mxyvqyk";
-    })
+  # officially supported database drivers
+  dbDrivers = with python.pkgs; [
+    psycopg2
+    aiosqlite
+    # sqlite driver is already shipped with python by default
   ];
 
-  propagatedBuildInputs = [
+in python.pkgs.buildPythonPackage rec {
+  pname = "mautrix-telegram";
+  version = "0.11.1";
+  disabled = python.pythonOlder "3.7";
+
+  src = fetchFromGitHub {
+    owner = "mautrix";
+    repo = "telegram";
+    rev = "v${version}";
+    sha256 = "sha256-Df+v1Q+5Iaa9GKcwIabMKjJwmVd5Qub8M54jEEiAPFc=";
+  };
+
+  patches = [ ./0001-Re-add-entrypoint.patch ];
+  postPatch = ''
+    substituteInPlace requirements.txt \
+      --replace "telethon>=1.22,<1.23" "telethon"
+  '';
+
+
+  propagatedBuildInputs = with python.pkgs; ([
+    Mako
     aiohttp
-    mautrix-appservice
+    mautrix
     sqlalchemy
-    alembic
     CommonMark
-    ruamel_yaml
-    future-fstrings
+    ruamel-yaml
     python_magic
-    telethon
+    tulir-telethon
     telethon-session-sqlalchemy
-  ];
+    pillow
+    lxml
+    setuptools
+    prometheus-client
+  ] ++ lib.optionals withE2BE [
+    asyncpg
+    python-olm
+    pycryptodome
+    unpaddedbase64
+  ]) ++ dbDrivers;
 
-  # No tests available
+  # Tests are broken and throw the following for every test:
+  #   TypeError: 'Mock' object is not subscriptable
+  #
+  # The tests were touched the last time in 2019 and upstream CI doesn't even build
+  # those, so it's safe to assume that this part of the software is abandoned.
   doCheck = false;
+  checkInputs = with python.pkgs; [
+    pytest
+    pytest-mock
+    pytest-asyncio
+  ];
 
   meta = with lib; {
-    homepage = https://github.com/tulir/mautrix-telegram;
+    homepage = "https://github.com/mautrix/telegram";
     description = "A Matrix-Telegram hybrid puppeting/relaybot bridge";
     license = licenses.agpl3Plus;
-    maintainers = with maintainers; [ nyanloutre ];
+    platforms = platforms.linux;
+    maintainers = with maintainers; [ nyanloutre ma27 ];
   };
 }

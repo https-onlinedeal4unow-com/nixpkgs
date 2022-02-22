@@ -1,34 +1,55 @@
-{ stdenv
-, buildPythonPackage
-, fetchPypi, fetchpatch
+{ lib, stdenv, buildPythonPackage, fetchPypi, isPy27, python
 , darwin
+, pytestCheckHook
+, mock
+, ipaddress
+, unittest2
 }:
 
 buildPythonPackage rec {
   pname = "psutil";
-  version = "5.4.8";
+  version = "5.9.0";
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "6e265c8f3da00b015d24b842bfeb111f856b13d24f2c57036582568dc650d6c3";
+    sha256 = "869842dbd66bb80c3217158e629d6fceaecc3a3166d3d1faee515b05dd26ca25";
   };
 
-  patches = [
-    (fetchpatch {
-      name = "disk_io_counters_fails.patch";
-      url = "https://github.com/giampaolo/psutil/commit/8f99f3782663959062ee868bbfdbc336307a3a4d.diff";
-      sha256 = "0j7wdgq8y20k27wcpmbgc1chd0vmbkxy8j0zwni1s4i7hyk64hmk";
-    })
+  # We have many test failures on various parts of the package:
+  #  - segfaults on darwin:
+  #    https://github.com/giampaolo/psutil/issues/1715
+  #  - swap (on linux) might cause test failures if it is fully used:
+  #    https://github.com/giampaolo/psutil/issues/1911
+  #  - some mount paths are required in the build sanbox to make the tests succeed:
+  #    https://github.com/giampaolo/psutil/issues/1912
+  doCheck = false;
+  checkInputs = [ pytestCheckHook ]
+  ++ lib.optionals isPy27 [ mock ipaddress unittest2 ];
+  # In addition to the issues listed above there are some that occure due to
+  # our sandboxing which we can work around by disabling some tests:
+  # - cpu_times was flaky on darwin
+  # - the other disabled tests are likely due to sanboxing (missing specific errors)
+  pytestFlagsArray = [
+    "$out/${python.sitePackages}/psutil/tests/test_system.py"
   ];
 
-  # No tests in archive
-  doCheck = false;
+  # Note: $out must be referenced as test import paths are relative
+  disabledTests = [
+    "user"
+    "disk_io_counters"
+    "sensors_battery"
+    "cpu_times"
+    "cpu_freq"
+  ];
 
-  buildInputs = [] ++ stdenv.lib.optionals stdenv.isDarwin [ darwin.IOKit ];
+  buildInputs = lib.optionals stdenv.isDarwin [ darwin.IOKit ];
 
-  meta = {
+  pythonImportsCheck = [ "psutil" ];
+
+  meta = with lib; {
     description = "Process and system utilization information interface for python";
-    homepage = https://github.com/giampaolo/psutil;
-    license = stdenv.lib.licenses.bsd3;
+    homepage = "https://github.com/giampaolo/psutil";
+    license = licenses.bsd3;
+    maintainers = with maintainers; [ jonringer ];
   };
 }

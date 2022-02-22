@@ -21,7 +21,7 @@ chomp $OPAM_RELEASE_SHA256;
 
 my $OPAM_BASE_URL = "https://raw.githubusercontent.com/$OPAM_GITHUB_REPO/$OPAM_TAG";
 my $OPAM_OPAM = `curl -L --url \Q$OPAM_BASE_URL\E/opam-devel.opam`;
-my($OCAML_MIN_VERSION) = $OPAM_OPAM =~ /^available: ocaml-version >= "(.*)"$/m
+my($OCAML_MIN_VERSION) = $OPAM_OPAM =~ /^  "ocaml" {>= "(.*)"}$/m
   or die "could not parse ocaml version bound\n";
 
 print <<"EOF";
@@ -51,7 +51,7 @@ for my $src (sort keys %urls) {
   system "echo \Q$md5s{$src}\E' *'\Q$store_path\E | md5sum -c 1>&2";
   die "md5 check failed for $urls{$src}\n" if $?;
   print <<"EOF";
-    $src = fetchurl {
+    "$src" = fetchurl {
       url = "$urls{$src}";
       sha256 = "$sha256";
     };
@@ -64,11 +64,12 @@ print <<"EOF";
       sha256 = "$OPAM_RELEASE_SHA256";
     };
   };
-in stdenv.mkDerivation rec {
-  name = "opam-\${version}";
+in stdenv.mkDerivation {
+  pname = "opam";
   version = "$OPAM_RELEASE";
 
-  buildInputs = [ unzip curl ncurses ocaml makeWrapper getconf ] ++ lib.optional stdenv.isLinux bubblewrap;
+  nativeBuildInputs = [ makeWrapper unzip ];
+  buildInputs = [ curl ncurses ocaml getconf ] ++ lib.optional stdenv.isLinux bubblewrap;
 
   src = srcs.opam;
 
@@ -78,7 +79,7 @@ for my $src (sort keys %urls) {
   my($ext) = $urls{$src} =~ /(\.(?:t(?:ar\.|)|)(?:gz|bz2?))$/
     or die "could not find extension for $urls{$src}\n";
   print <<"EOF";
-    ln -sv \${srcs.$src} \$sourceRoot/src_ext/$src$ext
+    ln -sv \${srcs."$src"} \$sourceRoot/src_ext/$src$ext
 EOF
 }
 print <<'EOF';
@@ -114,16 +115,16 @@ print <<'EOF';
     makeWrapper $out/bin/.opam-wrapped $out/bin/opam \
       --argv0 "opam" \
       --suffix PATH : ${aspcud}/bin:${unzip}/bin:${curl}/bin:${lib.optionalString stdenv.isLinux "${bubblewrap}/bin:"}${getconf}/bin \
-      --set OPAM_USER_PATH_RO /run/current-system/sw/bin:/nix/store
+      --set OPAM_USER_PATH_RO /run/current-system/sw/bin:/nix/
     $out/bin/opam-installer --prefix=$installer opam-installer.install
   '';
 
   doCheck = false;
 
-  meta = with stdenv.lib; {
+  meta = with lib; {
     description = "A package manager for OCaml";
-    homepage = http://opam.ocamlpro.com/;
-    maintainers = [ maintainers.henrytill ];
+    homepage = "https://opam.ocaml.org/";
+    maintainers = [ maintainers.henrytill maintainers.marsam ];
     platforms = platforms.all;
   };
 }

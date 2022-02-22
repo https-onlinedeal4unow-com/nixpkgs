@@ -1,12 +1,15 @@
-{ stdenv, callPackage, fetchpatch
+{ callPackage
 # Darwin frameworks
 , Cocoa, CoreMedia
 , ...
 }@args:
 
-callPackage ./generic.nix (args // rec {
-  version = "${branch}";
-  branch = "3.4.5";
-  sha256 = "0cbzysj9pskxh1kfdwmq2848fn6gi4pvh5y3insv10pdhpcjp8a3";
+callPackage ./generic.nix (rec {
+  version = branch;
+  branch = "3.4.8";
+  sha256 = "1d0r4yja2dkkyhdwx1migq46gsrcbajiv66263a5sq5bfr9dqkch";
   darwinFrameworks = [ Cocoa CoreMedia ];
-})
+  knownVulnerabilities = [
+    "CVE-2021-30123"
+  ];
+} // args)

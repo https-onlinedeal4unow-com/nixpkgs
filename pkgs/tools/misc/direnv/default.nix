@@ -1,34 +1,43 @@
-{ stdenv, fetchFromGitHub, buildGoPackage, bash, fetchpatch }:
+{ lib, stdenv, fetchFromGitHub, buildGoModule, bash, fish, zsh }:
 
-buildGoPackage rec {
-  name = "direnv-${version}";
-  version = "2.19.2";
-  goPackagePath = "github.com/direnv/direnv";
+buildGoModule rec {
+  pname = "direnv";
+  version = "2.30.3";
 
   src = fetchFromGitHub {
     owner = "direnv";
     repo = "direnv";
     rev = "v${version}";
-    sha256 = "1iq9wmc63x1c7g1ixdhd6q3w1sx8xl8kf1bprxwq26n9zpd0g13g";
+    sha256 = "sha256-cLDafCZH0WKexO6jCdzUhRWaxmQYb1ay9w9lje3cQ+U=";
   };
 
-  postConfigure = ''
-    cd $NIX_BUILD_TOP/go/src/$goPackagePath
-  '';
+  vendorSha256 = "sha256-YhgQUl9fdictEtz6J88vEzznGd8Ipeb9AYo/p1ZLz5k=";
 
   # we have no bash at the moment for windows
-  makeFlags = stdenv.lib.optional (!stdenv.hostPlatform.isWindows) [
-    "BASH_PATH=${bash}/bin/bash"
-  ];
+  BASH_PATH =
+    lib.optionalString (!stdenv.hostPlatform.isWindows)
+    "${bash}/bin/bash";
 
-  installPhase = ''
-    mkdir -p $out
-    make install DESTDIR=$bin
-    mkdir -p $bin/share/fish/vendor_conf.d
-    echo "eval ($bin/bin/direnv hook fish)" > $bin/share/fish/vendor_conf.d/direnv.fish
+  # replace the build phase to use the GNUMakefile instead
+  buildPhase = ''
+    make BASH_PATH=$BASH_PATH
   '';
 
-  meta = with stdenv.lib; {
+  installPhase = ''
+    make install PREFIX=$out
+  '';
+
+  checkInputs = [ fish zsh ];
+
+  # temporarily disable tests, check if they can be reenabled with the next release
+  doCheck = false;
+
+  checkPhase = ''
+    export HOME=$(mktemp -d)
+    make test-go test-bash test-fish test-zsh
+  '';
+
+  meta = with lib; {
     description = "A shell extension that manages your environment";
     longDescription = ''
       Once hooked into your shell direnv is looking for an .envrc file in your
@@ -41,7 +50,7 @@ buildGoPackage rec {
       In short, this little tool allows you to have project-specific
       environment variables.
     '';
-    homepage = https://direnv.net;
+    homepage = "https://direnv.net";
     license = licenses.mit;
     maintainers = with maintainers; [ zimbatm ];
   };

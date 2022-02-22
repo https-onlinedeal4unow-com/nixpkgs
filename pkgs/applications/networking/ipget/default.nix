@@ -1,32 +1,30 @@
-{ stdenv, buildGoPackage, fetchFromGitHub, fetchgx }:
+{ lib, buildGoModule, fetchFromGitHub }:
 
-buildGoPackage rec {
-  name = "ipget-${version}";
-  version = "0.2.5";
-  rev = "v${version}";
-
-  goPackagePath = "github.com/ipfs/ipget";
-  
-  extraSrcPaths = [
-    (fetchgx {
-      inherit name src;
-      sha256 = "1d4w8zl5mcppn3d4bl7qdkiqlf8gi3z2a62nygx17bqpa3da8cf3";
-    })
-  ];
- 
-  goDeps = ../../../tools/package-management/gx/deps.nix;
+buildGoModule rec {
+  pname = "ipget";
+  version = "0.8.0";
 
   src = fetchFromGitHub {
     owner = "ipfs";
     repo = "ipget";
-    inherit rev;
-    sha256 = "0a8yxqhl469ipiznrgkp3yi1xz3xzcbpx60wabqppq8hccrdiybk";
+    rev = "v${version}";
+    sha256 = "sha256-qRPke8/CUmGX6v+8qv9JQCUC8T9pjwRRyGmBWvatsJ0=";
   };
 
-  meta = with stdenv.lib; {
+  vendorSha256 = "sha256-La9V5B+UDaOswh/R8ad4xsnCF5ewtF7G+uiqnarM4Mg=";
+
+  postPatch = ''
+    # main module (github.com/ipfs/ipget) does not contain package github.com/ipfs/ipget/sharness/dependencies
+    rm -r sharness/dependencies/
+  '';
+
+  doCheck = false;
+
+  meta = with lib; {
     description = "Retrieve files over IPFS and save them locally";
-    homepage = https://ipfs.io/;
+    homepage = "https://ipfs.io/";
     license = licenses.mit;
+    maintainers = with maintainers; [ Luflosi ];
     platforms = platforms.unix;
   };
 }

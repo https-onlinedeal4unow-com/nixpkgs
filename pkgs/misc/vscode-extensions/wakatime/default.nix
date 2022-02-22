@@ -1,4 +1,5 @@
-{ stdenv, wakatime, vscode-utils }:
+{ lib
+, vscode-utils }:
 
 let
   inherit (vscode-utils) buildVscodeMarketplaceExtension;
@@ -7,24 +8,15 @@ in
     mktplcRef = {
       name = "vscode-wakatime";
       publisher = "WakaTime";
-      version = "1.2.5";
-      sha256 = "011yx3pwqbcz5fmzani57k0axgh458r4ipqwbjlklnrwbrkjhzra";
+      version = "17.1.0";
+      sha256 = "177q8angrn702pxrrpk1fzggzlnnaymq32v55qpjgjb74rhg4dzw";
     };
 
-    postPatch = ''
-      mkdir -p out/wakatime-master
-
-      cp -rt out/wakatime-master --no-preserve=all ${wakatime}/lib/python*/site-packages/wakatime
-    '';
-
-    meta = with stdenv.lib; {
+    meta = with lib; {
       description = ''
         Visual Studio Code plugin for automatic time tracking and metrics generated
         from your programming activity
       '';
       license = licenses.bsd3;
-      maintainers = with maintainers; [
-        eadwu
-      ];
     };
   }

@@ -1,30 +1,41 @@
-{ stdenv, buildGoPackage, fetchFromGitHub }:
+{ lib, buildGoModule, fetchFromGitHub, installShellFiles }:
 
-buildGoPackage rec {
-  name = "hugo-${version}";
-  version = "0.50";
-
-  goPackagePath = "github.com/gohugoio/hugo";
+buildGoModule rec {
+  pname = "hugo";
+  version = "0.92.2";
 
   src = fetchFromGitHub {
-    owner  = "gohugoio";
-    repo   = "hugo";
-    rev    = "v${version}";
-    sha256 = "1shrw7pxwrz9g5x9bq6k5qvhn3fqmwznadpw7i07msh97p8b3dyn";
+    owner = "gohugoio";
+    repo = pname;
+    rev = "v${version}";
+    sha256 = "sha256-kwqN/9H/ZI2eL09K/9bOMBWW9bow8LtKpbfxyfxIucA=";
   };
 
-  goDeps = ./deps.nix;
+  vendorSha256 = "sha256-7dJUl0IxsLj0ds2jqtChNCQEBiK9PahG159IhyFxwdM=";
 
-  buildFlags = "-tags extended";
+  doCheck = false;
+
+  proxyVendor = true;
+
+  tags = [ "extended" ];
+
+  subPackages = [ "." ];
+
+  nativeBuildInputs = [ installShellFiles ];
 
   postInstall = ''
-    rm $bin/bin/generate
+    $out/bin/hugo gen man
+    installManPage man/*
+    installShellCompletion --cmd hugo \
+      --bash <($out/bin/hugo gen autocomplete --type=bash) \
+      --fish <($out/bin/hugo gen autocomplete --type=fish) \
+      --zsh <($out/bin/hugo gen autocomplete --type=zsh)
   '';
 
-  meta = with stdenv.lib; {
-    description = "A fast and modern static website engine.";
-    homepage = https://gohugo.io;
+  meta = with lib; {
+    description = "A fast and modern static website engine";
+    homepage = "https://gohugo.io";
     license = licenses.asl20;
-    maintainers = with maintainers; [ schneefux ];
+    maintainers = with maintainers; [ schneefux Br1ght0ne Frostman ];
   };
 }

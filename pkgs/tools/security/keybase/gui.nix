@@ -1,18 +1,19 @@
-{ stdenv, fetchurl, alsaLib, atk, cairo, cups, udev, hicolor-icon-theme
-, dbus, expat, fontconfig, freetype, gdk_pixbuf, glib, gtk3, gnome3
-, libnotify, nspr, nss, pango, systemd, xorg, autoPatchelfHook, wrapGAppsHook }:
+{ stdenv, lib, fetchurl, alsa-lib, atk, cairo, cups, udev, libdrm, mesa
+, dbus, expat, fontconfig, freetype, gdk-pixbuf, glib, gtk3, libappindicator-gtk3
+, libnotify, nspr, nss, pango, systemd, xorg, autoPatchelfHook, wrapGAppsHook
+, runtimeShell, gsettings-desktop-schemas }:
 
 let
-  versionSuffix = "20190205202117.6394d03e6c";
+  versionSuffix = "20220120174718.95a3939b3a";
 in
 
 stdenv.mkDerivation rec {
-  name = "keybase-gui-${version}";
-  version = "3.0.0"; # Find latest version from https://prerelease.keybase.io/deb/dists/stable/main/binary-amd64/Packages
+  pname = "keybase-gui";
+  version = "5.9.0"; # Find latest version from https://prerelease.keybase.io/deb/dists/stable/main/binary-amd64/Packages
 
   src = fetchurl {
     url = "https://s3.amazonaws.com/prerelease.keybase.io/linux_binaries/deb/keybase_${version + "-" + versionSuffix}_amd64.deb";
-    sha256 = "0nwz0v6sqx1gd7spha09pk2bjbb8lgaxbrh0r6j6p0xzgzz6birw";
+    sha256 = "sha256-Wdl5pZFIz+mDkkE0EDpLGH/eGWYoBbLV05LYJgkwpI4=";
   };
 
   nativeBuildInputs = [
@@ -21,7 +22,7 @@ stdenv.mkDerivation rec {
   ];
 
   buildInputs = [
-    alsaLib
+    alsa-lib
     atk
     cairo
     cups
@@ -29,10 +30,11 @@ stdenv.mkDerivation rec {
     expat
     fontconfig
     freetype
-    gdk_pixbuf
+    gdk-pixbuf
     glib
-    gnome3.gsettings-desktop-schemas
+    gsettings-desktop-schemas
     gtk3
+    libappindicator-gtk3
     libnotify
     nspr
     nss
@@ -50,15 +52,18 @@ stdenv.mkDerivation rec {
     xorg.libXrender
     xorg.libXtst
     xorg.libxcb
+    libdrm
+    mesa.out
   ];
 
   runtimeDependencies = [
-    udev.lib
+    (lib.getLib udev)
+    libappindicator-gtk3
   ];
 
   dontBuild = true;
   dontConfigure = true;
-  dontPatchElf = true;
+  dontPatchELF = true;
 
   unpackPhase = ''
     ar xf $src
@@ -71,7 +76,7 @@ stdenv.mkDerivation rec {
     mv opt/keybase $out/share/
 
     cat > $out/bin/keybase-gui <<EOF
-    #!${stdenv.shell}
+    #!${runtimeShell}
 
     checkFailed() {
       if [ "\$NIX_SKIP_KEYBASE_CHECKS" = "1" ]; then
@@ -101,11 +106,11 @@ stdenv.mkDerivation rec {
       --replace run_keybase $out/bin/keybase-gui
   '';
 
-  meta = with stdenv.lib; {
-    homepage = https://www.keybase.io/;
+  meta = with lib; {
+    homepage = "https://www.keybase.io/";
     description = "The Keybase official GUI";
-    platforms = platforms.linux;
-    maintainers = with maintainers; [ rvolosatovs puffnfresh np ];
+    platforms = [ "x86_64-linux" ];
+    maintainers = with maintainers; [ avaq rvolosatovs puffnfresh np Br1ght0ne shofius ];
     license = licenses.bsd3;
   };
 }

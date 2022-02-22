@@ -1,27 +1,25 @@
-{ stdenv, fetchurl, makeWrapper
-, coreutils, jdk, rlwrap, gnupg1compat }:
+{ lib, stdenv, fetchurl, makeWrapper
+, coreutils, jdk, rlwrap, gnupg }:
 
 stdenv.mkDerivation rec {
   pname = "leiningen";
-  version = "2.9.0";
-  name = "${pname}-${version}";
+  version = "2.9.7";
 
   src = fetchurl {
     url = "https://raw.github.com/technomancy/leiningen/${version}/bin/lein-pkg";
-    sha256 = "18wwcc956w1ii6zf8zjndgvmc614s18nxz3dary2iigbfq4y0asc";
+    sha256 = "sha256-948g0ZMfAoJw53vA8MAKWg76Tst6VnYwSjSuT0aeKB0=";
   };
 
   jarsrc = fetchurl {
-    # NOTE: This is actually a .jar, Github has issues
-    url = "https://github.com/technomancy/leiningen/releases/download/${version}/${name}-standalone.zip";
-    sha256 = "07pw852w57w3lj3fddlxfzjsln90q52dwxvxpz9qbprw8p2xfrim";
+    url = "https://github.com/technomancy/leiningen/releases/download/${version}/${pname}-${version}-standalone.jar";
+    sha256 = "sha256-gvAUFKzs3bsOvW1XFQW7Zxpv0JMja82sJGjP5fLqqAI=";
   };
 
-  JARNAME = "${name}-standalone.jar";
+  JARNAME = "${pname}-${version}-standalone.jar";
 
-  unpackPhase = "true";
+  dontUnpack = true;
 
-  buildInputs = [ makeWrapper ];
+  nativeBuildInputs = [ makeWrapper ];
   propagatedBuildInputs = [ jdk ];
 
   # the jar is not in share/java, because it's a standalone jar and should
@@ -39,16 +37,17 @@ stdenv.mkDerivation rec {
     substituteInPlace $out/bin/lein \
       --replace 'LEIN_JAR=/usr/share/java/leiningen-$LEIN_VERSION-standalone.jar' "LEIN_JAR=$out/share/$JARNAME"
     wrapProgram $out/bin/lein \
-      --prefix PATH ":" "${stdenv.lib.makeBinPath [ rlwrap coreutils ]}" \
-      --set LEIN_GPG ${gnupg1compat}/bin/gpg \
+      --prefix PATH ":" "${lib.makeBinPath [ rlwrap coreutils ]}" \
+      --set LEIN_GPG ${gnupg}/bin/gpg \
       --set JAVA_CMD ${jdk}/bin/java
   '';
 
   meta = {
-    homepage = https://leiningen.org/;
+    homepage = "https://leiningen.org/";
     description = "Project automation for Clojure";
-    license = stdenv.lib.licenses.epl10;
-    platforms = stdenv.lib.platforms.linux ++ stdenv.lib.platforms.darwin;
-    maintainers = with stdenv.lib.maintainers; [ the-kenny ];
+    license = lib.licenses.epl10;
+    platforms = lib.platforms.linux ++ lib.platforms.darwin;
+    maintainers = with lib.maintainers; [ thiagokokada ];
+    mainProgram = "lein";
   };
 }

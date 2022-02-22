@@ -1,48 +1,63 @@
-{ stdenv, fetchFromGitHub, pkgconfig, meson, ninja, python3, pantheon
-, gtk3, gtksourceview, json-glib, gnome3, gobject-introspection, wrapGAppsHook }:
+{ lib
+, stdenv
+, fetchFromGitHub
+, gtk4
+, hicolor-icon-theme
+, json-glib
+, libadwaita
+, libgee
+, meson
+, ninja
+, nix-update-script
+, pkg-config
+, python3
+, vala
+, wrapGAppsHook4
+}:
 
 stdenv.mkDerivation rec {
   pname = "notejot";
-  version = "1.5.4";
-
-  name = "${pname}-${version}";
+  version = "3.4.9";
 
   src = fetchFromGitHub {
     owner = "lainsce";
     repo = pname;
     rev = version;
-    sha256 = "1lv4s2mqddi6lz414kqpp4vcwnkjibc0k2xhnczaa1wf3azlxjgf";
+    hash = "sha256-42k9CAnXAb7Ic580SIa95MDCkCWtso1F+0eD69HX8WI=";
   };
 
   nativeBuildInputs = [
-    gobject-introspection
     meson
     ninja
-    pkgconfig
+    pkg-config
     python3
-    pantheon.vala
-    wrapGAppsHook
+    vala
+    wrapGAppsHook4
   ];
 
   buildInputs = [
-    pantheon.elementary-icon-theme
-    pantheon.granite
-    gnome3.libgee
-    gtk3
-    gtksourceview
+    gtk4
+    hicolor-icon-theme
     json-glib
+    libadwaita
+    libgee
   ];
 
   postPatch = ''
-    chmod +x meson/post_install.py
-    patchShebangs meson/post_install.py
+    chmod +x build-aux/post_install.py
+    patchShebangs build-aux/post_install.py
   '';
 
-  meta = with stdenv.lib; {
-    description = "Stupidly-simple sticky notes applet";
-    homepage = https://github.com/lainsce/notejot;
-    license = licenses.gpl2Plus;
-    maintainers = with maintainers; [ worldofpeace ];
+  passthru.updateScript = nix-update-script {
+    attrPath = pname;
+  };
+
+  meta = with lib; {
+    homepage = "https://github.com/lainsce/notejot";
+    description = "Stupidly-simple notes app";
+    license = licenses.gpl3Plus;
+    maintainers = with maintainers; [ AndersonTorres ];
     platforms = platforms.linux;
+    mainProgram = "io.github.lainsce.Notejot";
   };
 }

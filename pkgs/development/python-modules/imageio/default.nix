@@ -1,47 +1,61 @@
-{ stdenv
+{ lib
 , buildPythonPackage
+, isPy27
 , fetchPypi
+, fetchpatch
+, imageio-ffmpeg
+, numpy
 , pillow
 , psutil
-, pytest
-, numpy
-, isPy3k
-, futures
-, enum34
+, pytestCheckHook
+, tifffile
 }:
 
 buildPythonPackage rec {
   pname = "imageio";
-  version = "2.5.0";
+  version = "2.14.1";
+  disabled = isPy27;
 
   src = fetchPypi {
-    sha256 = "42e65aadfc3d57a1043615c92bdf6319b67589e49a0aae2b985b82144aceacad";
+    sha256 = "sha256-cJwY+ACYHkKGq+S9hrbJtbtuKFtrkztboJYu+OeZQFg=";
     inherit pname version;
   };
 
-  checkInputs = [ pytest psutil ];
-  propagatedBuildInputs = [ numpy pillow ] ++ stdenv.lib.optionals (!isPy3k) [
-    futures
-    enum34
+  propagatedBuildInputs = [
+    imageio-ffmpeg
+    numpy
+    pillow
   ];
 
-  checkPhase = ''
+  checkInputs = [
+    psutil
+    pytestCheckHook
+    tifffile
+  ];
+
+  preCheck = ''
     export IMAGEIO_USERDIR="$TMP"
     export IMAGEIO_NO_INTERNET="true"
     export HOME="$(mktemp -d)"
-    py.test
   '';
 
-  # For some reason, importing imageio also imports xml on Nix, see
-  # https://github.com/imageio/imageio/issues/395
-  postPatch = ''
-    substituteInPlace tests/test_meta.py --replace '"urllib",' "\"urllib\",\"xml\""
-  '';
+  disabledTests = [
+    # tries to pull remote resources, even with IMAGEIO_NO_INTERNET
+    "test_png_remote"
+    # needs git history
+    "test_mvolread_out_of_bytes"
+    "test_imiter"
+    "test_memory_size"
+    "test_legacy_write_empty"
+  ];
 
-  meta = with stdenv.lib; {
+  disabledTestPaths = [
+    "tests/test_pillow.py"
+  ];
+
+  meta = with lib; {
     description = "Library for reading and writing a wide range of image, video, scientific, and volumetric data formats";
-    homepage = http://imageio.github.io/;
+    homepage = "http://imageio.github.io/";
     license = licenses.bsd2;
   };
-
 }

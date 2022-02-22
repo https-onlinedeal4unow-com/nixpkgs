@@ -1,13 +1,13 @@
-{ stdenv
+{ lib
 , fetchPypi
-, buildPythonApplication
+, buildPythonPackage
 , guessit
 , babelfish
 , enzyme
 , beautifulsoup4
 , requests
 , click
-, dogpile_cache
+, dogpile-cache
 , stevedore
 , chardet
 , pysrt
@@ -15,26 +15,40 @@
 , appdirs
 , rarfile
 , pytz
-, futures
+, sympy
+, vcrpy
+, pytest
+, pytest-flakes
+, pytest-cov
+, pytest-runner
 }:
 
-buildPythonApplication rec {
+buildPythonPackage rec {
   pname = "subliminal";
-  version = "2.0.5";
+  version = "2.1.0";
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "1dzv5csjcwgz69aimarx2c6606ckm2gbn4x2mzydcqnyai7sayhl";
+    sha256 = "12v2clnbic8320fjsvkg3xfxfa7x8inhjk61z00pzwx46g3rqhy6";
   };
 
-  # Too many test dependencies
-  doCheck = false;
-  propagatedBuildInputs = [ guessit babelfish enzyme beautifulsoup4 requests
-                            click dogpile_cache stevedore chardet pysrt six
-                            appdirs rarfile pytz futures ];
+  propagatedBuildInputs = [
+    guessit babelfish enzyme beautifulsoup4 requests
+    click dogpile-cache stevedore chardet pysrt six
+    appdirs rarfile pytz
+  ];
 
-  meta = with stdenv.lib; {
-    homepage = https://github.com/Diaoul/subliminal;
+  checkInputs = [
+    sympy vcrpy pytest pytest-flakes
+    pytest-cov pytest-runner
+  ];
+
+  # https://github.com/Diaoul/subliminal/pull/963
+  doCheck = false;
+  pythonImportsCheck = [ "subliminal" ];
+
+  meta = with lib; {
+    homepage = "https://github.com/Diaoul/subliminal";
     description = "Python library to search and download subtitles";
     license = licenses.mit;
   };

@@ -55,6 +55,7 @@ in {
     };
     actionYAML = mkOption {
       description = "curator action.yaml file contents, alternatively use curator-cli which takes a simple action command";
+      type = types.lines;
       example = ''
         ---
         actions:
@@ -86,7 +87,7 @@ in {
       startAt = cfg.interval;
       serviceConfig = {
         ExecStart =
-          "${pkgs.python3Packages.elasticsearch-curator}/bin/curator" +
+          "${pkgs.elasticsearch-curator}/bin/curator" +
           " --config ${curatorConfig} ${curatorAction}";
       };
     };

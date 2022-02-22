@@ -1,26 +1,23 @@
-{ stdenv, fetchPypi, buildPythonPackage, pytest, pytestcov, tox }:
+{ lib, fetchPypi, buildPythonPackage }:
 
 buildPythonPackage rec {
   pname = "distro";
-  version = "1.4.0";
-
-  checkInputs = [ pytest pytestcov ];
-
-  checkPhase = ''
-    py.test
-  '';
+  version = "1.6.0";
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "362dde65d846d23baee4b5c058c8586f219b5a54be1cf5fc6ff55c4578392f57";
+    sha256 = "83f5e5a09f9c5f68f60173de572930effbcc0287bb84fdc4426cb4168c088424";
   };
 
-  meta = with stdenv.lib; {
-    homepage = https://github.com/nir0s/distro;
+  # tests are very targeted at individual linux distributions
+  doCheck = false;
+
+  pythonImportsCheck = [ "distro" ];
+
+  meta = with lib; {
+    homepage = "https://github.com/nir0s/distro";
     description = "Linux Distribution - a Linux OS platform information API.";
     license = licenses.asl20;
-    maintainers = with maintainers; [ nand0p ];
-    # Many failing tests
-    broken = true;
+    maintainers = with maintainers; [ ];
   };
 }

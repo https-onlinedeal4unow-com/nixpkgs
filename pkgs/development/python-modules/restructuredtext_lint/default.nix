@@ -3,31 +3,28 @@
 , fetchPypi
 , docutils
 , nose
-, stdenv
-, flake8
-, pyyaml
 , testtools
 }:
 
 buildPythonPackage rec {
   pname = "restructuredtext_lint";
-  version = "1.2.2";
+  version = "1.3.2";
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "82880a8de8a41bfc84f533744091b1ead8e2ab9ad6c0a3f60f4750ef6c802350";
+    sha256 = "d3b10a1fe2ecac537e51ae6d151b223b78de9fafdd50e5eb6b08c243df173c80";
   };
 
-  checkInputs = [ nose flake8 pyyaml testtools ];
+  checkInputs = [ nose testtools ];
   propagatedBuildInputs = [ docutils ];
 
   checkPhase = ''
-     ${stdenv.shell} test.sh
+    nosetests --nocapture
   '';
 
   meta = {
     description = "reStructuredText linter";
-    homepage = https://github.com/twolfson/restructuredtext-lint;
+    homepage = "https://github.com/twolfson/restructuredtext-lint";
     license = lib.licenses.unlicense;
   };
 }

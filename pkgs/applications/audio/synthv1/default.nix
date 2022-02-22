@@ -1,21 +1,21 @@
-{ stdenv, fetchurl, pkgconfig, qt5, libjack2, alsaLib, liblo, lv2 }:
+{ mkDerivation, lib, fetchurl, pkg-config, qtbase, qttools, libjack2, alsa-lib, liblo, lv2 }:
 
-stdenv.mkDerivation rec {
-  name = "synthv1-${version}";
-  version = "0.9.4";
+mkDerivation rec {
+  pname = "synthv1";
+  version = "0.9.23";
 
   src = fetchurl {
-    url = "mirror://sourceforge/synthv1/${name}.tar.gz";
-    sha256 = "18xjj14g8gnnbwyrf39bdxc5aswb620w9i323skdf6rnaq229jyv";
+    url = "mirror://sourceforge/synthv1/${pname}-${version}.tar.gz";
+    sha256 = "sha256-0V72T51icT/t9fJf4mwcMYZLjzTPnmiCbU+BdwnCmw4=";
   };
 
-  buildInputs = [ qt5.qtbase qt5.qttools libjack2 alsaLib liblo lv2 ];
+  buildInputs = [ qtbase qttools libjack2 alsa-lib liblo lv2 ];
 
-  nativeBuildInputs = [ pkgconfig ];
+  nativeBuildInputs = [ pkg-config ];
 
-  meta = with stdenv.lib; {
+  meta = with lib; {
     description = "An old-school 4-oscillator subtractive polyphonic synthesizer with stereo fx";
-    homepage = https://synthv1.sourceforge.io/;
+    homepage = "https://synthv1.sourceforge.io/";
     license = licenses.gpl2Plus;
     platforms = platforms.linux;
     maintainers = [ maintainers.goibhniu ];

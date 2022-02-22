@@ -1,26 +1,40 @@
-{ lib, fetchPypi, buildPythonPackage
-, lxml, pycryptodome, construct
-, argon2_cffi, dateutil, enum34
+{ lib, fetchFromGitHub, buildPythonPackage
+, lxml, pycryptodomex, construct
+, argon2_cffi, python-dateutil, future
+, python
 }:
 
 buildPythonPackage rec {
   pname   = "pykeepass";
-  version = "3.0.2";
+  version = "4.0.1";
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "1kfnh42nimsbdpwpny2c9df82b2n4fb5fagh54ck06f3x483vd90";
+  src = fetchFromGitHub {
+    owner = "libkeepass";
+    repo = "pykeepass";
+    rev = version;
+    sha256 = "sha256-D+loaPBpKdXyiqpdth3ANDjH6IewuKYhj/DzRE2hDn4=";
   };
+
+  postPatch = ''
+    substituteInPlace setup.py --replace "==" ">="
+  '';
 
   propagatedBuildInputs = [
-    lxml pycryptodome construct
-    argon2_cffi dateutil enum34
+    lxml pycryptodomex construct
+    argon2_cffi python-dateutil future
   ];
 
-  meta = {
-    homepage = https://github.com/pschmitt/pykeepass;
-    description = "Python library to interact with keepass databases (supports KDBX3 and KDBX4)";
-    license = lib.licenses.gpl3;
-  };
+  propagatedNativeBuildInputs = [ argon2_cffi ];
 
+  checkPhase = ''
+    ${python.interpreter} -m unittest tests.tests
+  '';
+
+  meta = with lib; {
+    homepage = "https://github.com/libkeepass/pykeepass";
+    changelog = "https://github.com/libkeepass/pykeepass/blob/${version}/CHANGELOG.rst";
+    description = "Python library to interact with keepass databases (supports KDBX3 and KDBX4)";
+    license = licenses.gpl3Only;
+    maintainers = with maintainers; [ dotlambda ];
+  };
 }

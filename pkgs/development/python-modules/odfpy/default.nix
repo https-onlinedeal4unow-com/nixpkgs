@@ -1,28 +1,30 @@
 { lib
 , buildPythonPackage
 , fetchPypi
-, python
-, isPy27
+, defusedxml
+, pytest
 }:
 
 buildPythonPackage rec {
   pname = "odfpy";
-  version = "1.4.0";
+  version = "1.4.1";
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "596021f0519623ca8717331951c95e3b8d7b21e86edc7efe8cb650a0d0f59a2b";
+    sha256 = "1v1qqk9p12qla85yscq2g413l3qasn6yr4ncyc934465b5p6lxnv";
   };
 
-  # Python 2.7 uses a different ordering for xml namespaces.
-  # The testAttributeForeign test expects "ns44", but fails since it gets "ns43"
-  checkPhase = " " + lib.optionalString (!isPy27) ''
-    ${python.interpreter} -m unittest discover -s tests
+  propagatedBuildInputs = [ defusedxml ];
+
+  checkInputs = [ pytest ];
+
+  checkPhase = ''
+    pytest
   '';
 
   meta = {
     description = "Python API and tools to manipulate OpenDocument files";
-    homepage = "https://joinup.ec.europa.eu/software/odfpy/home";
+    homepage = "https://github.com/eea/odfpy";
     license = lib.licenses.asl20;
   };
 }

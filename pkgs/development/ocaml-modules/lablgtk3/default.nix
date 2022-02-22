@@ -1,27 +1,33 @@
-{ stdenv, fetchurl, pkgconfig, ocaml, findlib, gtk3, gtkspell3, gtksourceview }:
+{ lib, fetchFromGitHub, fetchpatch, pkg-config, buildDunePackage, dune-configurator, gtk3, cairo2 }:
 
-if !stdenv.lib.versionAtLeast ocaml.version "4.05"
-then throw "lablgtk3 is not available for OCaml ${ocaml.version}"
-else
+buildDunePackage rec {
+  version = "3.1.2";
+  pname = "lablgtk3";
 
-stdenv.mkDerivation rec {
-  version = "3.0.beta3";
-  name = "ocaml${ocaml.version}-lablgtk3-${version}";
-  src = fetchurl {
-    url = https://forge.ocamlcore.org/frs/download.php/1775/lablgtk-3.0.beta3.tar.gz;
-    sha256 = "174mwwdz1s91a6ycbas7nc0g87c2l6zqv68zi5ab33yb76l46a6w";
+  useDune2 = true;
+
+  minimalOCamlVersion = "4.05";
+
+  src = fetchFromGitHub {
+    owner = "garrigue";
+    repo = "lablgtk";
+    rev = version;
+    sha256 = "sha256:0b17w9qb1f02h3313cm62mrqlhwxficppzm72n7sf8mmwrylxbm7";
   };
 
-  nativeBuildInputs = [ pkgconfig ];
-  buildInputs = [ ocaml findlib gtk3 gtkspell3 gtksourceview ];
-
-  buildFlags = "world";
+  patches = [ (fetchpatch {
+    name = "dune-project.patch";
+    url = "https://raw.githubusercontent.com/ocaml/opam-repository/10a48cb9fab88f67f6cb70280e0fec035c32d41c/packages/lablgtk3/lablgtk3.3.1.2/files/dune-project.patch";
+    sha256 = "03jf5hclqdq7iq84djaqcnfnnnd7z3hb48rr8n1gyxzjyx86b3fh";
+  }) ];
+  nativeBuildInputs = [ pkg-config ];
+  buildInputs = [ dune-configurator ];
+  propagatedBuildInputs = [ gtk3 cairo2 ];
 
   meta = {
-    description = "OCaml interface to gtk+-3";
+    description = "OCaml interface to GTK 3";
     homepage = "http://lablgtk.forge.ocamlcore.org/";
-    license = stdenv.lib.licenses.lgpl21;
-    maintainers = [ stdenv.lib.maintainers.vbgl ];
-    inherit (ocaml.meta) platforms;
+    license = lib.licenses.lgpl21;
+    maintainers = [ lib.maintainers.vbgl ];
   };
 }

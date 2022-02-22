@@ -1,12 +1,12 @@
-{ stdenv, nodejs, fetchzip }:
+{ lib, stdenv, nodejs, fetchzip, testVersion, yarn }:
 
 stdenv.mkDerivation rec {
-  name = "yarn-${version}";
-  version = "1.13.0";
+  pname = "yarn";
+  version = "1.22.17";
 
   src = fetchzip {
     url = "https://github.com/yarnpkg/yarn/releases/download/v${version}/yarn-v${version}.tar.gz";
-    sha256 = "0wkh8m41g5sajxlchsaqardn4v2ax06xywk12fwdjn5j3sxlgq2a";
+    sha256 = "1skzlyv2976bl1063f94422jbjy4ns1nxl622biizq31z4821yvj";
   };
 
   buildInputs = [ nodejs ];
@@ -18,11 +18,13 @@ stdenv.mkDerivation rec {
     ln -s $out/libexec/yarn/bin/yarn.js $out/bin/yarnpkg
   '';
 
-  meta = with stdenv.lib; {
-    homepage = https://yarnpkg.com/;
+  passthru.tests = testVersion { package = yarn; };
+
+  meta = with lib; {
+    homepage = "https://yarnpkg.com/";
     description = "Fast, reliable, and secure dependency management for javascript";
     license = licenses.bsd2;
-    maintainers = [ maintainers.offline maintainers.screendriver ];
+    maintainers = with maintainers; [ offline screendriver ];
     platforms = platforms.linux ++ platforms.darwin;
   };
 }

@@ -1,17 +1,21 @@
-{ lib, buildPythonPackage, fetchPypi, async_generator, rsa, pyaes, pythonOlder }:
+{ lib, buildPythonPackage, fetchPypi, openssl, rsa, pyaes, pythonOlder }:
 
 buildPythonPackage rec {
   pname = "telethon";
-  version = "1.5.5";
+  version = "1.24.0";
 
   src = fetchPypi {
     inherit version;
     pname = "Telethon";
-    sha256 = "1qpc4vc3lidhlp1c7521nxizjr6y5c3l9x41knqv02x8n3l9knxa";
+    sha256 = "818cb61281ed3f75ba4da9b68cb69486bed9474d2db4e0aa16e482053117452c";
   };
 
+  patchPhase = ''
+    substituteInPlace telethon/crypto/libssl.py --replace \
+      "ctypes.util.find_library('ssl')" "'${openssl.out}/lib/libssl.so'"
+  '';
+
   propagatedBuildInputs = [
-    async_generator
     rsa
     pyaes
   ];
@@ -22,7 +26,7 @@ buildPythonPackage rec {
   disabled = pythonOlder "3.5";
 
   meta = with lib; {
-    homepage = https://github.com/LonamiWebs/Telethon;
+    homepage = "https://github.com/LonamiWebs/Telethon";
     description = "Full-featured Telegram client library for Python 3";
     license = licenses.mit;
     maintainers = with maintainers; [ nyanloutre ];

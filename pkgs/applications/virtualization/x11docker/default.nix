@@ -1,32 +1,29 @@
-{ stdenv, fetchFromGitHub, makeWrapper, nx-libs, xorg }:
+{ lib, stdenv, fetchFromGitHub, makeWrapper, nx-libs, xorg, getopt, gnugrep, gawk, ps, mount, iproute2 }:
 stdenv.mkDerivation rec {
-  name = "x11docker-${version}";
-  version = "5.4.1";
+  pname = "x11docker";
+  version = "7.1.0";
   src = fetchFromGitHub {
     owner = "mviereck";
     repo = "x11docker";
     rev = "v${version}";
-    sha256 = "0fcdr8i3crf4cina41h030q2jf5zvafll97iff129dl3sb27jnvi";
+    sha256 = "sha256-SBX50wQbNUvgmnO0B0iXiEXEmJrkVmtNqUUv0O6yRic=";
   };
   nativeBuildInputs = [ makeWrapper ];
-  buildInputs = [ nx-libs xorg.xhost xorg.xinit ];
 
   dontBuild = true;
 
-  PATH_PREFIX = "${nx-libs}/bin:${xorg.xdpyinfo}/bin:${xorg.xhost}/bin:${xorg.xinit}/bin";
-
+  # Don't install `x11docker-gui`, because requires `kaptain` dependency
   installPhase = ''
     install -D x11docker "$out/bin/x11docker";
-    #install -D x11docker-gui "$out/bin/x11docker-gui";
-    wrapProgram "$out/bin/x11docker" --prefix PATH : "${PATH_PREFIX}"
-    #wrapProgram "$out/bin/x11docker-gui" --prefix PATH : "${PATH_PREFIX}"
-    # GUI disabled because of missing `kaptain` dependency
+    wrapProgram "$out/bin/x11docker" \
+      --prefix PATH : "${lib.makeBinPath [ getopt gnugrep gawk ps mount iproute2 nx-libs xorg.xdpyinfo xorg.xhost xorg.xinit ]}"
   '';
 
   meta = {
     description = "Run graphical applications with Docker";
-    homepage = https://github.com/mviereck/x11docker;
-    license = stdenv.lib.licenses.mit;
-    maintainers = with stdenv.lib.maintainers; [ jD91mZM2 ];
+    homepage = "https://github.com/mviereck/x11docker";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ ];
+    platforms = lib.platforms.linux;
   };
 }

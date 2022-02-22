@@ -1,18 +1,25 @@
-{ stdenv, fetchFromGitHub, qmake, qtbase, qtsvg, qtx11extras, libX11, libXext, qttools }:
+{ lib, stdenv, fetchFromGitHub, qmake, qtbase, qtsvg, qtx11extras, kwindowsystem
+, libX11, libXext, qttools, wrapQtAppsHook
+}:
 
 stdenv.mkDerivation rec {
   pname = "qtstyleplugin-kvantum";
-  version = "0.10.8";
+  version = "1.0.1";
 
   src = fetchFromGitHub {
     owner = "tsujan";
     repo = "Kvantum";
     rev = "V${version}";
-    sha256 = "0w4iqpkagrwvhahdl280ni06b7x1i621n3z740g84ysp2n3dv09l";
+    sha256 = "0k3j74klvd386ijsd4j09ccxlhga54z4pgnh36s9cv3rs7ab39qm";
   };
 
-  nativeBuildInputs = [ qmake qttools ];
-  buildInputs = [ qtbase qtsvg qtx11extras libX11 libXext  ];
+  nativeBuildInputs = [
+    qmake qttools wrapQtAppsHook
+  ];
+
+  buildInputs = [
+    qtbase qtsvg qtx11extras kwindowsystem libX11 libXext
+  ];
 
   sourceRoot = "source/Kvantum";
 
@@ -22,11 +29,12 @@ stdenv.mkDerivation rec {
       --replace "\$\$[QT_INSTALL_PLUGINS]" "$out/$qtPluginPrefix"
   '';
 
-  meta = with stdenv.lib; {
+  meta = with lib; {
     description = "SVG-based Qt5 theme engine plus a config tool and extra themes";
     homepage = "https://github.com/tsujan/Kvantum";
-    license = licenses.gpl3;
+    license = licenses.gpl3Plus;
     platforms = platforms.linux;
+    broken = lib.versionOlder qtbase.version "5.14";
     maintainers = [ maintainers.bugworm ];
   };
 }

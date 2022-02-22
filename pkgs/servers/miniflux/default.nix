@@ -1,35 +1,42 @@
-{ stdenv , buildGoPackage , fetchFromGitHub }:
+{ lib, buildGoModule, fetchFromGitHub, installShellFiles, nixosTests }:
 
-buildGoPackage rec {
+let
   pname = "miniflux";
-  version = "2.0.14";
+  version = "2.0.35";
 
-  goPackagePath = "miniflux.app";
+in buildGoModule {
+  inherit pname version;
 
   src = fetchFromGitHub {
-    owner = "miniflux";
-    repo = "miniflux";
+    owner = pname;
+    repo = "v2";
     rev = version;
-    sha256 = "1wd52zk7i07k0b5rlwqd4qszq42shdb4ss8871jqlf9zlbq85a0v";
+    sha256 = "sha256-tOainlvEB0O6yMzIm0df4r8D68swtjXBFUDsPcNc3uA=";
   };
 
-  goDeps = ./deps.nix;
+  vendorSha256 = "sha256-dxtQAGlNOVO9NtuGbF6Nifa4QhnFGyHKhlDS3+V5HuM=";
 
-  doCheck = true;
+  nativeBuildInputs = [ installShellFiles ];
 
-  buildFlagsArray = ''
-    -ldflags=-X ${goPackagePath}/version.Version=${version}
-  '';
+  checkPhase = ''
+    go test $(go list ./... | grep -v client)
+  ''; # skip client tests as they require network access
+
+  ldflags = [
+    "-s" "-w" "-X miniflux.app/version.Version=${version}"
+  ];
 
   postInstall = ''
-    mv $bin/bin/miniflux.app $bin/bin/miniflux
+    mv $out/bin/miniflux.app $out/bin/miniflux
+    installManPage miniflux.1
   '';
 
-  meta = with stdenv.lib; {
+  passthru.tests = nixosTests.miniflux;
+
+  meta = with lib; {
     description = "Minimalist and opinionated feed reader";
-    homepage = https://miniflux.app/;
+    homepage = "https://miniflux.app/";
     license = licenses.asl20;
     maintainers = with maintainers; [ rvolosatovs benpye ];
   };
 }
-

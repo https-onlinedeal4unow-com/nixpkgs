@@ -1,41 +1,54 @@
-{ fetchurl, stdenv, pkgconfig, intltool, libpulseaudio, gtkmm3
-, libcanberra-gtk3, makeWrapper, gnome3 }:
+{ fetchurl
+, fetchpatch
+, lib
+, stdenv
+, pkg-config
+, intltool
+, libpulseaudio
+, gtkmm3
+, libsigcxx
+, libcanberra-gtk3
+, json-glib
+, gnome
+, wrapGAppsHook
+}:
 
 stdenv.mkDerivation rec {
-  name = "pavucontrol-3.0";
+  pname = "pavucontrol";
+  version = "5.0";
 
   src = fetchurl {
-    url = "https://freedesktop.org/software/pulseaudio/pavucontrol/${name}.tar.xz";
-    sha256 = "14486c6lmmirkhscbfygz114f6yzf97h35n3h3pdr27w4mdfmlmk";
+    url = "https://freedesktop.org/software/pulseaudio/${pname}/${pname}-${version}.tar.xz";
+    sha256 = "sha256-zityw7XxpwrQ3xndgXUPlFW9IIcNHTo20gU2ry6PTno=";
   };
 
-  preFixup = ''
-    wrapProgram "$out/bin/pavucontrol" \
-     --set GDK_PIXBUF_MODULE_FILE "$GDK_PIXBUF_MODULE_FILE" \
-     --prefix XDG_DATA_DIRS : "$XDG_ICON_DIRS"
-  '';
+  buildInputs = [
+    libpulseaudio
+    gtkmm3
+    libsigcxx
+    libcanberra-gtk3
+    json-glib
+    gnome.adwaita-icon-theme
+  ];
 
-  buildInputs = [ libpulseaudio gtkmm3 libcanberra-gtk3 makeWrapper
-                  gnome3.adwaita-icon-theme ];
-
-  nativeBuildInputs = [ pkgconfig intltool ];
+  nativeBuildInputs = [ pkg-config intltool wrapGAppsHook ];
 
   configureFlags = [ "--disable-lynx" ];
 
-  meta = with stdenv.lib; {
+  meta = with lib; {
     description = "PulseAudio Volume Control";
 
     longDescription = ''
-      PulseAudio Volume Control (pavucontrol) provides a GTK+
+      PulseAudio Volume Control (pavucontrol) provides a GTK
       graphical user interface to connect to a PulseAudio server and
       easily control the volume of all clients, sinks, etc.
     '';
 
-    homepage = http://freedesktop.org/software/pulseaudio/pavucontrol/;
+    homepage = "http://freedesktop.org/software/pulseaudio/pavucontrol/";
 
-    license = stdenv.lib.licenses.gpl2Plus;
+    license = lib.licenses.gpl2Plus;
 
-    maintainers = with maintainers; [ abbradar jgeerds ];
+    maintainers = with maintainers; [ abbradar globin ];
     platforms = platforms.linux;
   };
 }

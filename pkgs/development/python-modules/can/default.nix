@@ -1,35 +1,75 @@
 { lib
 , buildPythonPackage
-, fetchPypi
-, wrapt
+, fetchFromGitHub
+, future
+, hypothesis
+, parameterized
+, msgpack
 , pyserial
-, nose
-, mock
-, pytest
-, pytest-timeout }:
+, pytest-timeout
+, pytestCheckHook
+, pythonOlder
+, typing-extensions
+, wrapt
+}:
 
 buildPythonPackage rec {
   pname = "python-can";
-  version = "3.0.0";
+  version = "unstable-2022-01-11";
+  format = "setuptools";
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "0d2ddb3b663af51b11a4c7fb7a577c63302a831986239f82bb6af65efc065b07";
+  disabled = pythonOlder "3.6";
+
+  src = fetchFromGitHub {
+    owner = "hardbyte";
+    repo = pname;
+    rev = "2e24af08326ecd69fba9f02fed7b9c26f233c92b";
+    hash = "sha256-ZP5qtbjDtBZ2uT9DOSvSnfHyTlirr0oCEXhiLO1ydz0=";
   };
 
-  propagatedBuildInputs = [ wrapt pyserial ];
-  checkInputs = [ nose mock pytest pytest-timeout ];
+  propagatedBuildInputs = [
+    msgpack
+    pyserial
+    typing-extensions
+    wrapt
+  ];
 
-  checkPhase = ''
-    pytest -k "not test_writer_and_reader \
-           and not test_reader \
-           and not test_socketcan_on_ci_server"
+  checkInputs = [
+    future
+    hypothesis
+    parameterized
+    pytest-timeout
+    pytestCheckHook
+  ];
+
+  postPatch = ''
+    substituteInPlace tox.ini \
+      --replace " --cov=can --cov-config=tox.ini --cov-report=xml --cov-report=term" ""
   '';
 
+  disabledTestPaths = [
+    # We don't support all interfaces
+    "test/test_interface_canalystii.py"
+  ];
+
+  disabledTests = [
+    # Tests require access socket
+    "BasicTestUdpMulticastBusIPv4"
+    "BasicTestUdpMulticastBusIPv6"
+  ];
+
+  preCheck = ''
+    export PATH="$PATH:$out/bin";
+  '';
+
+  pythonImportsCheck = [
+    "can"
+  ];
+
   meta = with lib; {
-    homepage = https://github.com/hardbyte/python-can;
     description = "CAN support for Python";
-    license = licenses.lgpl3;
-    maintainers = with maintainers; [ sorki ];
+    homepage = "python-can.readthedocs.io";
+    license = licenses.lgpl3Only;
+    maintainers = with maintainers; [ fab sorki ];
   };
 }

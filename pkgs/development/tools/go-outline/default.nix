@@ -1,24 +1,22 @@
-{ stdenv, buildGoPackage, fetchFromGitHub }:
+{ lib, buildGoModule, fetchFromGitHub }:
 
-buildGoPackage rec {
-  name = "go-outline-${version}";
-  version = "unstable-2017-08-04";
-  rev = "9e9d089bb61a5ce4f8e0c8d8dc5b4e41b0e02a48";
-
-  goPackagePath = "github.com/ramya-rao-a/go-outline";
-  goDeps = ./deps.nix;
+buildGoModule rec {
+  pname = "go-outline";
+  version = "unstable-2021-06-08";
 
   src = fetchFromGitHub {
-    inherit rev;
     owner = "ramya-rao-a";
     repo = "go-outline";
-    sha256 = "0kbkv4d6q9w0d41m00sqdm10l0sg56mv8y6rmidqs152mm2w13x0";
+    rev = "9736a4bde949f321d201e5eaa5ae2bcde011bf00";
+    sha256 = "sha256-5ns6n1UO9kRSw8iio4dmJDncsyvFeN01bjxHxQ9Fae4=";
   };
 
-  meta = {
-    description = "Utility to extract JSON representation of declarations from a Go source file.";
-    homepage = https://github.com/ramya-rao-a/go-outline;
-    maintainers = with stdenv.lib.maintainers; [ vdemeester ];
-    license = stdenv.lib.licenses.mit;
+  vendorSha256 = "sha256-jYYtSXdJd2eUc80UfwRRMPcX6tFiXE3LbxV3NAdKVKE=";
+
+  meta = with lib; {
+    description = "Utility to extract JSON representation of declarations from a Go source file";
+    homepage = "https://github.com/ramya-rao-a/go-outline";
+    maintainers = with maintainers; [ SuperSandro2000 vdemeester ];
+    license = licenses.mit;
   };
 }

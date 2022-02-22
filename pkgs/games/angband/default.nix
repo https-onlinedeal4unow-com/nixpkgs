@@ -1,22 +1,22 @@
-{ stdenv, fetchFromGitHub, autoreconfHook, ncurses5 }:
+{ lib, stdenv, fetchFromGitHub, autoreconfHook, ncurses5 }:
 
 stdenv.mkDerivation rec {
-  version = "4.1.3";
-  name = "angband-${version}";
+  pname = "angband";
+  version = "4.2.3";
 
   src = fetchFromGitHub {
     owner = "angband";
     repo = "angband";
     rev = version;
-    sha256 = "0g9m7pq8a1hzhr83v552hfk37qc868lms2mlsq29pbi8vxdjybk7";
+    sha256 = "sha256-SFHAG74qJcV3E+jxPcOH2moW/kXhpwUwbGZVkNxqWd8=";
   };
 
   nativeBuildInputs = [ autoreconfHook ];
   buildInputs = [ ncurses5 ];
-  installFlags = "bindir=$(out)/bin";
+  installFlags = [ "bindir=$(out)/bin" ];
 
-  meta = with stdenv.lib; {
-    homepage = http://rephial.org/;
+  meta = with lib; {
+    homepage = "https://angband.github.io/angband";
     description = "A single-player roguelike dungeon exploration game";
     maintainers = [ maintainers.chattered ];
     license = licenses.gpl2;

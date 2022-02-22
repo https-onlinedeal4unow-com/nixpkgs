@@ -1,23 +1,40 @@
-{ stdenv, fetchurl,
-	openssl,
- } :
+{ lib
+, stdenv
+, fetchurl
+, openssl
+, which
+}:
 
 stdenv.mkDerivation rec {
-  version = "20190113";
-  name = "mbuffer-${version}";
+  pname = "mbuffer";
+  version = "20211018";
 
   src = fetchurl {
     url = "http://www.maier-komor.de/software/mbuffer/mbuffer-${version}.tgz";
-    sha256 = "07rgv98ys3bd0q35ivxjrgrhq199z19lj14jafzq96gcwspy8783";
+    sha256 = "sha256-4kDB5OSsFMKL6MZg7EfUTOFrHo7JKqkHrRMAT/1dtuM=";
   };
 
-  buildInputs = [ openssl ];
+  buildInputs = [
+    openssl
+    which
+  ];
 
-  meta = {
-    homepage = http://www.maier-komor.de/mbuffer.html;
+  # The mbuffer configure scripts fails to recognize the correct
+  # objdump binary during cross-building for foreign platforms.
+  # The correct objdump is exposed via the environment variable
+  # $OBJDUMP, which should be used in such cases.
+  preConfigure = lib.optionalString (stdenv.hostPlatform != stdenv.buildPlatform) ''
+    substituteInPlace configure \
+      --replace "OBJDUMP=$ac_cv_path_OBJDUMP" 'OBJDUMP=''${OBJDUMP}'
+  '';
+
+  doCheck = true;
+
+  meta = with lib; {
     description  = "A tool for buffering data streams with a large set of unique features";
-    license = stdenv.lib.licenses.gpl3;
-    maintainers = with stdenv.lib.maintainers; [ tokudan ];
-    platforms = stdenv.lib.platforms.linux; # Maybe other non-darwin Unix
+    homepage = "https://www.maier-komor.de/mbuffer.html";
+    license = licenses.gpl3Only;
+    maintainers = with maintainers; [ tokudan ];
+    platforms = platforms.linux; # Maybe other non-darwin Unix
   };
 }

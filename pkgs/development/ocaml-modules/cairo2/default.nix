@@ -1,43 +1,26 @@
-{ stdenv, fetchurl, ocaml, findlib, ocamlbuild, pkgconfig, cairo, lablgtk, gtk2,
-  enableGtkSupport ? true # Whether to compile with support for Gtk
-                          # integration (library file cairo2_gtk). Depends
-                          # on lablgtk and gtk2.
-}:
+{ stdenv, lib, fetchurl, buildDunePackage, ocaml, dune-configurator, pkg-config, cairo
+, ApplicationServices }:
 
-let
-  inherit (stdenv.lib) optionals;
-  version = "0.5";
-in
-
-stdenv.mkDerivation {
-
-  name = "ocaml${ocaml.version}-cairo2-${version}";
+buildDunePackage rec {
+  pname = "cairo2";
+  version = "0.6.2";
 
   src = fetchurl {
-    url = "https://github.com/Chris00/ocaml-cairo/releases/download/${version}/cairo2-${version}.tar.gz";
-    sha256 = "1559df74rzh4v7c9hr6phymq1f5121s83q0xy3r83x4apj74dchj";
+    url = "https://github.com/Chris00/ocaml-cairo/releases/download/${version}/cairo2-${version}.tbz";
+    sha256 = "sha256-a7P1kiVmIwT6Fhtwxs29ffgO4iexsulxUoc9cnJmEK4=";
   };
 
-  nativeBuildInputs = [ pkgconfig ];
-  buildInputs = [ ocaml findlib ocamlbuild cairo ]
-                ++ optionals enableGtkSupport [ gtk2 ];
+  minimalOCamlVersion = "4.02";
+  useDune2 = true;
 
-  # lablgtk2 is marked as a propagated build input since loading the
-  # cairo.lablgtk2 package from the toplevel tries to load lablgtk2 as
-  # well.
-  propagatedBuildInputs = optionals enableGtkSupport [ lablgtk ];
+  nativeBuildInputs = [ pkg-config ];
+  buildInputs = [ cairo dune-configurator ] ++ lib.optionals stdenv.isDarwin [ ApplicationServices ];
 
-  createFindlibDestdir = true;
+  doCheck = !(stdenv.isDarwin
+  # https://github.com/Chris00/ocaml-cairo/issues/19
+  || lib.versionAtLeast ocaml.version "4.10");
 
-  configurePhase = "ocaml setup.ml -configure --prefix $out"
-                 + (if enableGtkSupport then " --enable-lablgtk2"
-                                        else " --disable-lablgtk2");
-
-  buildPhase = "ocaml setup.ml -build";
-
-  installPhase = "ocaml setup.ml -install";
-
-  meta = with stdenv.lib; {
+  meta = with lib; {
     homepage = "https://github.com/Chris00/ocaml-cairo";
     description = "Binding to Cairo, a 2D Vector Graphics Library";
     longDescription = ''
@@ -47,7 +30,6 @@ stdenv.mkDerivation {
       and SVG file output.
     '';
     license = licenses.lgpl3;
-    platforms = ocaml.meta.platforms or [];
-    maintainers = [ maintainers.jirkamarsik ];
+    maintainers = with maintainers; [ jirkamarsik vbgl ];
   };
 }

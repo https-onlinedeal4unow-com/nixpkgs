@@ -1,6 +1,6 @@
-{ stdenv, fetchurl, pkgconfig, freetype, lcms, libtiff, libxml2
+{ lib, stdenv, fetchurl, pkg-config, freetype, lcms, libtiff, libxml2
 , libart_lgpl, qt4, python2, cups, fontconfig, libjpeg
-, zlib, libpng, xorg, cairo, podofo, aspell, boost, cmake, imagemagick }:
+, zlib, libpng, xorg, cairo, podofo, hunspell, boost, cmake, imagemagick, ghostscript }:
 
 let
   icon = fetchurl {
@@ -8,26 +8,32 @@ let
     sha256 = "0hq3i7c2l50445an9glhhg47kj26y16svfajc6naqn307ph9vzc3";
   };
 
-  pythonEnv = python2.withPackages(ps: [ps.tkinter]);
+  pythonEnv = python2.withPackages(ps: [ps.tkinter ps.pillow]);
 in stdenv.mkDerivation rec {
-  name = "scribus-1.4.7";
+  pname = "scribus";
+  version = "1.4.8";
 
   src = fetchurl {
-    url = "mirror://sourceforge/scribus/scribus/${name}.tar.xz";
-    sha256 = "1v2ziq3k0yjz35nk5plcbc1jpi53p9v1cq1z3spch9lwlns3bls2";
+    url = "mirror://sourceforge/${pname}/${pname}/${pname}-${version}.tar.xz";
+    sha256 = "0bq433myw6h1siqlsakxv6ghb002rp3mfz5k12bg68s0k6skn992";
   };
 
-  enableParallelBuilding = true;
-
+  nativeBuildInputs = [ pkg-config cmake ];
   buildInputs = with xorg;
-    [ pkgconfig cmake freetype lcms libtiff libxml2 libart_lgpl qt4
+    [ freetype lcms libtiff libxml2 libart_lgpl qt4
       pythonEnv cups fontconfig
-      libjpeg zlib libpng podofo aspell cairo
+      libjpeg zlib libpng podofo hunspell cairo
       boost # for internal 2geom library
       libXaw libXext libX11 libXtst libXi libXinerama
       libpthreadstubs libXau libXdmcp
       imagemagick # To build the icon
     ];
+
+  postPatch = ''
+    substituteInPlace scribus/util_ghostscript.cpp \
+      --replace 'QString gsName("gs");' \
+                'QString gsName("${ghostscript}/bin/gs");'
+  '';
 
   postInstall = ''
     for i in 16 24 48 64 96 128 256 512; do
@@ -37,10 +43,10 @@ in stdenv.mkDerivation rec {
   '';
 
   meta = {
-    maintainers = [ stdenv.lib.maintainers.marcweber ];
-    platforms = stdenv.lib.platforms.linux;
+    maintainers = [ lib.maintainers.marcweber ];
+    platforms = lib.platforms.linux;
     description = "Desktop Publishing (DTP) and Layout program for Linux";
-    homepage = https://www.scribus.net;
-    license = stdenv.lib.licenses.gpl2;
+    homepage = "https://www.scribus.net";
+    license = lib.licenses.gpl2;
   };
 }

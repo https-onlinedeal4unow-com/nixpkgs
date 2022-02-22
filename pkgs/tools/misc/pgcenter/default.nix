@@ -1,22 +1,31 @@
-{ stdenv, buildGoPackage, fetchFromGitHub }:
+{ lib, buildGoModule, fetchFromGitHub }:
 
-buildGoPackage rec {
-  name = "pgcenter-${version}";
-  version = "0.5.0";
-
-  goPackagePath = "github.com/lesovsky/pgcenter";
+buildGoModule rec {
+  pname = "pgcenter";
+  version = "0.9.2";
 
   src = fetchFromGitHub {
     owner  = "lesovsky";
     repo   = "pgcenter";
     rev    = "v${version}";
-    sha256 = "1bbpzli8hh5356gink6byk085zyfwxi8wigdy5cbadppx4qnk078";
+    sha256 = "sha256-xaY01T12/5Peww9scRgfc5yHj7QA8BEwOK5l6OedziY=";
   };
 
-  goDeps = ./deps.nix;
+  vendorSha256 = "sha256-9hYiyZ34atmSL7JvuXyiGU7HR4E6qN7bGZlyU+hP+FU=";
 
-  meta = with stdenv.lib; {
-    homepage = https://pgcenter.org/;
+  subPackages = [ "cmd" ];
+
+  ldflags = [ "-w" "-s" "-X main.gitTag=${src.rev}" "-X main.gitCommit=${src.rev}" "-X main.gitBranch=master" ];
+
+  postInstall = ''
+    mv $out/bin/cmd $out/bin/pgcenter
+  '';
+
+  doCheck = false;
+
+  meta = with lib; {
+    homepage = "https://pgcenter.org/";
+    changelog = "https://github.com/lesovsky/pgcenter/raw/v${version}/doc/Changelog";
     description = "Command-line admin tool for observing and troubleshooting PostgreSQL";
     license = licenses.bsd3;
     maintainers = [ maintainers.marsam ];

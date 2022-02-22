@@ -1,27 +1,30 @@
-{ stdenv, fetchurl, qmake, qttools, qtbase, qtsvg, qttranslations, qtdeclarative, qtxmlpatterns, qtwayland, qtwebsockets }:
+{ mkDerivation, lib, stdenv, fetchurl
+, qmake, qttools, qtbase, qtsvg, qtdeclarative, qtxmlpatterns, qtwebsockets
+, qtx11extras, qtwayland
+}:
 
-stdenv.mkDerivation rec {
+mkDerivation rec {
   pname = "qownnotes";
-  version = "19.2.3";
+  version = "22.2.7";
 
   src = fetchurl {
     url = "https://download.tuxfamily.org/${pname}/src/${pname}-${version}.tar.xz";
-    # Can grab official version like so:
-    # $ curl https://download.tuxfamily.org/qownnotes/src/qownnotes-19.1.8.tar.xz.sha256
-    sha256 = "1favfyanwy2lp3c8abw6ng12vnzgv127k0772a8pax9cqbd5gyry";
+    # Fetch the checksum of current version with curl:
+    # curl https://download.tuxfamily.org/qownnotes/src/qownnotes-<version>.tar.xz.sha256
+    sha256 = "f7c97f3dc3435ecdc740131548aacd390332c8b97c4e6fee98a3e80985786533";
   };
 
   nativeBuildInputs = [ qmake qttools ];
-  buildInputs = [
-    qtbase qtsvg qtdeclarative qtxmlpatterns qtwebsockets
-  ] ++ stdenv.lib.optional stdenv.isLinux qtwayland;
 
-  meta = with stdenv.lib; {
-    description = "Plain-text file notepad and todo-list manager with markdown support and ownCloud / Nextcloud integration";
+  buildInputs = [ qtbase qtsvg qtdeclarative qtxmlpatterns qtwebsockets qtx11extras ]
+    ++ lib.optionals stdenv.isLinux [ qtwayland ];
 
-    homepage = https://www.qownnotes.org/;
-    platforms = platforms.all;
-    license = licenses.gpl2;
-    maintainers = with maintainers; [ dtzWill ];
+  meta = with lib; {
+    description = "Plain-text file notepad and todo-list manager with markdown support and Nextcloud/ownCloud integration.";
+    longDescription = "QOwnNotes is a plain-text file notepad and todo-list manager with markdown support and Nextcloud/ownCloud integration.";
+    homepage = "https://www.qownnotes.org/";
+    license = licenses.gpl2Only;
+    maintainers = with maintainers; [ dtzWill totoroot ];
+    platforms = platforms.linux;
   };
 }

@@ -1,13 +1,13 @@
-{ stdenv, fetchgit, autoreconfHook, texinfo, ncurses, readline, zlib, lzo, openssl }:
+{ lib, stdenv, fetchgit, fetchpatch, autoreconfHook, texinfo, ncurses, readline, zlib, lzo, openssl }:
 
 stdenv.mkDerivation rec {
-  name = "tinc-${version}";
-  version = "1.1pre17";
+  pname = "tinc";
+  version = "1.1pre18";
 
   src = fetchgit {
-    rev = "refs/tags/release-${version}";
+    rev = "release-${version}";
     url = "git://tinc-vpn.org/tinc";
-    sha256 = "12abmx9qglchgn94a1qwgzldf2kaz77p8705ylpggzyncxv6bw2q";
+    sha256 = "0a7d1xg34p54sv66lckn8rz2bpg7bl01najm2rxiwbsm956y7afm";
   };
 
   outputs = [ "out" "man" "info" ];
@@ -28,7 +28,7 @@ stdenv.mkDerivation rec {
     "--localstatedir=/var"
   ];
 
-  meta = with stdenv.lib; {
+  meta = with lib; {
     description = "VPN daemon with full mesh routing";
     longDescription = ''
       tinc is a Virtual Private Network (VPN) daemon that uses tunnelling and
@@ -39,6 +39,6 @@ stdenv.mkDerivation rec {
     homepage="http://www.tinc-vpn.org/";
     license = licenses.gpl2Plus;
     platforms = platforms.unix;
-    maintainers = with maintainers; [ fpletz lassulus ];
+    maintainers = with maintainers; [ fpletz lassulus mic92 ];
   };
 }

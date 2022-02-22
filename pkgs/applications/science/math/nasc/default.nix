@@ -1,52 +1,77 @@
-{ stdenv
+{ lib, stdenv
 , fetchFromGitHub
-, pkgconfig
+, pkg-config
+, fetchpatch
+, python3
+, meson
+, ninja
+, vala
 , gtk3
+, glib
 , pantheon
-, gnome3
 , gtksourceview
 , libgee
-, cmake
+, nix-update-script
+, webkitgtk
 , libqalculate
-, gobject-introspection
-, wrapGAppsHook }:
+, intltool
+, gnuplot
+, wrapGAppsHook
+}:
 
 stdenv.mkDerivation rec {
-  name = "nasc-${version}";
-  version = "0.5.1";
+  pname = "nasc";
+  version = "0.8.0";
 
   src = fetchFromGitHub {
     owner = "parnold-x";
-    repo = "nasc";
+    repo = pname;
     rev = version;
-    sha256 = "13y5fnm7g3xgdxmdydlgly73nigh8maqbf9d6c9bpyzxkxq1csy5";
+    sha256 = "02b9a59a9fzsb6nn3ycwwbcbv04qfzm6x7csq2addpzx5wak6dd8";
+    fetchSubmodules = true;
   };
 
-  postPatch = ''
-    # libqalculatenasc.so is not installed, and nasc fails to start
-    substituteInPlace libqalculatenasc/CMakeLists.txt --replace SHARED STATIC
-  '';
-
   nativeBuildInputs = [
-    cmake
-    pantheon.vala
-    gobject-introspection # for setup-hook
-    pkgconfig
+    glib # post_install.py
+    gtk3 # post_install.py
+    intltool # for libqalculate
+    meson
+    ninja
+    pkg-config
+    python3
+    vala
     wrapGAppsHook
   ];
 
   buildInputs = [
-    pantheon.elementary-icon-theme
+    glib
+    gtk3
     gtksourceview
     libgee
-    gnome3.libsoup
+    pantheon.elementary-icon-theme
     pantheon.granite
-    gtk3
-    libqalculate
-  ];
+    webkitgtk
+    # We add libqalculate's runtime dependencies because nasc has it as a modified subproject.
+  ] ++ libqalculate.buildInputs ++ libqalculate.propagatedBuildInputs;
 
-  meta = with stdenv.lib; {
-    description = "Do maths like a normal person";
+  postPatch = ''
+    chmod +x meson/post_install.py
+    patchShebangs meson/post_install.py
+
+    # patch subproject. same code in libqalculate expression
+    substituteInPlace subprojects/libqalculate/libqalculate/Calculator-plot.cc \
+      --replace 'commandline = "gnuplot"' 'commandline = "${gnuplot}/bin/gnuplot"' \
+      --replace '"gnuplot - ' '"${gnuplot}/bin/gnuplot - '
+  '';
+
+  passthru = {
+    updateScript = nix-update-script {
+      attrPath = pname;
+    };
+  };
+
+  meta = with lib; {
+    description = "Do maths like a normal person, designed for elementary OS";
     longDescription = ''
       It’s an app where you do maths like a normal person. It lets you
       type whatever you want and smartly figures out what is math and
@@ -54,9 +79,10 @@ stdenv.mkDerivation rec {
       answers in to future equations and if that answer changes, so does
       the equations it’s used in.
     '';
-    homepage = https://github.com/parnold-x/nasc;
-    maintainers = with maintainers; [ samdroid-apps ];
+    homepage = "https://github.com/parnold-x/nasc";
+    maintainers = teams.pantheon.members;
     platforms = platforms.linux;
     license = licenses.gpl3Plus;
+    mainProgram = "com.github.parnold_x.nasc";
   };
 }

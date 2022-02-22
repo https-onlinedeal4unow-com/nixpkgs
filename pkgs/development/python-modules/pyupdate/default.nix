@@ -1,13 +1,13 @@
-{ stdenv, buildPythonPackage, fetchPypi, isPy3k
+{ lib, buildPythonPackage, fetchPypi, isPy3k
 , requests }:
 
 buildPythonPackage rec {
   pname = "pyupdate";
-  version = "0.2.26";
+  version = "1.4.0";
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "8d30f5b011c6be41886741e31bc87cadc9762d60800faf3ce419fa52132de35c";
+    sha256 = "016f50853b4d72e5ddb963b042caa45fb60fa4d3f13aee819d829af21e55ef07";
   };
 
   propagatedBuildInputs = [ requests ];
@@ -18,10 +18,10 @@ buildPythonPackage rec {
   # no tests
   doCheck = false;
 
-  meta = with stdenv.lib; {
+  meta = with lib; {
     # This description is terrible, but it's what upstream uses.
     description = "Package to update stuff";
-    homepage = https://github.com/ludeeus/pyupdate;
+    homepage = "https://github.com/ludeeus/pyupdate";
     license = licenses.mit;
     maintainers = with maintainers; [ peterhoeg ];
   };

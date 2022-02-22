@@ -1,27 +1,35 @@
-{ stdenv
+{ lib
 , buildPythonPackage
-, fetchFromGitHub
-, nose
+, fetchPypi
+, fetchpatch
+, isPy3k
+, pytestCheckHook
 }:
 
 buildPythonPackage rec {
   pname = "munkres";
-  version = "1.0.12";
+  version = "1.1.4";
 
-  # No sdist for 1.0.12, see https://github.com/bmc/munkres/issues/25
-  src = fetchFromGitHub {
-    owner = "bmc";
-    repo = pname;
-    rev = "release-${version}";
-    sha256 = "0m3rkn0z3ialndxmyg26xn081znna34i5maa1i4nkhy6nf0ixdjm";
+  disabled = !isPy3k;
+
+  src = fetchPypi {
+    inherit pname version;
+    sha256 = "fc44bf3c3979dada4b6b633ddeeb8ffbe8388ee9409e4d4e8310c2da1792db03";
   };
 
-  checkInputs = [ nose ];
+  patches = [
+    # Fixes test on 32-bit systems.
+    # Remove if https://github.com/bmc/munkres/pull/41 is merged.
+    (fetchpatch {
+      url = "https://github.com/bmc/munkres/commit/380a0d593a0569a761c4a035edaa4414c3b4b31d.patch";
+      sha256 = "0ga63k68r2080blzi04ajdl1m6xd87mmlqa8hxn9hyixrg1682vb";
+    })
+  ];
 
-  checkPhase = "nosetests";
+  checkInputs = [ pytestCheckHook ];
 
-  meta = with stdenv.lib; {
-    homepage = http://bmc.github.com/munkres/;
+  meta = with lib; {
+    homepage = "http://bmc.github.com/munkres/";
     description = "Munkres algorithm for the Assignment Problem";
     license = licenses.bsd3;
     maintainers = with maintainers; [ domenkozar ];

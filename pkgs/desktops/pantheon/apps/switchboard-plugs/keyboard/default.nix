@@ -1,57 +1,77 @@
-{ stdenv, fetchFromGitHub, pantheon, substituteAll, meson, ninja, pkgconfig, vala, libgee
-, granite, gtk3, libxml2, libgnomekbd, libxklavier, xorg, switchboard, gobject-introspection }:
+{ lib
+, stdenv
+, fetchFromGitHub
+, nix-update-script
+, substituteAll
+, meson
+, ninja
+, pkg-config
+, vala
+, libgee
+, gnome-settings-daemon
+, granite
+, gsettings-desktop-schemas
+, gtk3
+, libhandy
+, libxml2
+, libgnomekbd
+, libxklavier
+, ibus
+, onboard
+, switchboard
+}:
 
 stdenv.mkDerivation rec {
   pname = "switchboard-plug-keyboard";
-  version = "2.3.4";
+  version = "2.6.0";
 
   src = fetchFromGitHub {
     owner = "elementary";
     repo = pname;
     rev = version;
-    sha256 = "1997hnhlcp2jmf3z70na42vl1b7i5vxhp7k5ga5sl68dv0g4126y";
+    sha256 = "sha256-Bl0T+8upTdBnLs03UIimcAg0LO40KwuMZRNSM+y/3Hc=";
   };
 
-  passthru = {
-    updateScript = pantheon.updateScript {
-      repoName = pname;
-    };
-  };
+  patches = [
+    ./0001-Remove-Install-Unlisted-Engines-function.patch
+    (substituteAll {
+      src = ./fix-paths.patch;
+      inherit ibus onboard;
+    })
+  ];
 
   nativeBuildInputs = [
-    gobject-introspection
     libxml2
     meson
     ninja
-    pkgconfig
+    pkg-config
     vala
   ];
 
   buildInputs = [
+    gnome-settings-daemon # media-keys
     granite
+    gsettings-desktop-schemas
     gtk3
+    ibus
     libgee
     libgnomekbd
+    libhandy
     libxklavier
     switchboard
   ];
 
-  patches = [
-    (substituteAll {
-      src = ./xkb.patch;
-      config = "${xorg.xkeyboardconfig}/share/X11/xkb/rules/evdev.xml";
-    })
-  ];
+  passthru = {
+    updateScript = nix-update-script {
+      attrPath = "pantheon.${pname}";
+    };
+  };
 
-  LIBRARY_PATH = stdenv.lib.makeLibraryPath [ libgnomekbd ];
-
-  PKG_CONFIG_SWITCHBOARD_2_0_PLUGSDIR = "lib/switchboard";
-
-  meta = with stdenv.lib; {
+  meta = with lib; {
     description = "Switchboard Keyboard Plug";
-    homepage = https://github.com/elementary/switchboard-plug-keyboard;
+    homepage = "https://github.com/elementary/switchboard-plug-keyboard";
     license = licenses.gpl2Plus;
     platforms = platforms.linux;
-    maintainers = pantheon.maintainers;
+    maintainers = teams.pantheon.members;
   };
 }

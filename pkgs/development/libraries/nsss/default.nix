@@ -1,11 +1,11 @@
-{ stdenv, skawarePackages }:
+{ skawarePackages }:
 
 with skawarePackages;
 
 buildPackage {
   pname = "nsss";
-  version = "0.0.1.0";
-  sha256 = "0f285bvpvhk40cqjpkc1jb36il0fkzzzjmc89gbbq3awl3w4r1i0";
+  version = "0.2.0.1";
+  sha256 = "0nqjnfqvzzn4i45h849b3n8qwcrzd5wlrwlvkmjdga5k4yk4x63x";
 
   description = "An implementation of a subset of the pwd.h, group.h and shadow.h family of functions.";
 

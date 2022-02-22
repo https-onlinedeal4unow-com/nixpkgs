@@ -9,6 +9,8 @@ let
 in
 {
 
+  meta.maintainers = teams.pantheon.members;
+
   ###### interface
 
   options = {
